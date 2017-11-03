@@ -1,4 +1,4 @@
-Microsoft (R) Macro Assembler Version 14.11.25547.0	    11/02/17 17:20:18
+Microsoft (R) Macro Assembler Version 14.11.25547.0	    11/03/17 15:48:26
 main.asm						     Page 1 - 1
 
 
@@ -86,12 +86,22 @@ main.asm						     Page 1 - 1
 					; Cantidad de nodos del grafo
  000000D7 00000000			n DWORD ?
 					
-					; Cantidad total de elementos de la matriz de adyacencia y numero de bytes de la matriz de adyacencia
+					; Cantidad total de elementos de la matriz de adyacencia
  000000DB 00000000			dim DWORD ?
+					
+					; Numero total de bytes que ocupa la matriz de adyacencia
  000000DF 00000000			siz DWORD ?
+					
+					; Manejador del Heap
+ 000000E3 00000000			hhm DWORD ?
+					
+					; Puntero a la matriz de adyacencia
+ 000000E7 00000000			grafo DWORD ?
 
  00000000			.CODE
  00000000				main PROC
+						
+						
 						; Imprimimos el mensaje de bienvenida
  00000000  BA 00000000 R			mov edx, OFFSET bienvenida
  00000005  E8 00000000 E			call WriteString
@@ -104,47 +114,44 @@ main.asm						     Page 1 - 1
  0000001E  E8 00000000 E			call ReadDec
  00000023  A3 000000D7 R			mov n, eax
 						
-						; Inicializamos la variable dim
+						; Inicializamos las variables dim y siz
  00000028  A1 000000D7 R			mov eax, n
  0000002D  0F AF 05				imul eax, n
 	   000000D7 R
  00000034  A3 000000DB R			mov dim, eax
+ 00000039  6B C0 04				imul eax, TYPE DWORD
+ 0000003C  A3 000000DF R			mov siz, eax
 						
-						; Inicializamos la matriz de adyacencia en la pila y la variable siz
- 00000039  A1 000000DB R			mov eax, dim
- 0000003E  6B C0 04				imul eax, TYPE DWORD
- 00000041  54					push esp
- 00000042  2B E0				sub esp, eax
- 00000044  A3 000000DF R			mov siz, eax
+						; Inicializamos la matriz de adyacencia mediante asignacion dinamica de memoria (en el Heap)
 						
-						; Pedimos las conexiones del grafo una por una
- 00000049  BB 00000000				mov ebx, 0 ; Iterador para filas
- 0000004E  B9 00000000				mov ecx, 0 ; Iterador para columnas
+						
+						; PEDIMOS LAS CONEXIONES DEL GRAFO
+						
+ 00000041  BB 00000000				mov ebx, 0 ; Iterador para filas
+ 00000046  B9 00000000				mov ecx, 0 ; Iterador para columnas
 						
 						; Ejecutamos un ciclo que recorre la matriz de adyacencia, pidiendo la distancia correspondiente desde el nodo referenciado por ebx
 						; al nodo referenciado por ecx
- 00000053  3B 1D 000000D7 R	wFila:	cmp ebx, n ; mientras ebx sea
- 00000059  7D 12				jge ewF    ; menor a n
- 0000005B  3B 0D 000000D7 R	wCol:		cmp ecx, n ; mientras ecx sea
- 00000061  7D 07					jge ewC    ; menor a n
- 00000063  3B D9						cmp ebx, ecx
- 00000065  74 00						je siFCeq
+ 0000004B  3B 1D 000000D7 R	wFila:	cmp ebx, n ; Mientras ebx sea menor a n, iteramos (iteracion de filas)
+ 00000051  7D 12				jge ewF
+ 00000053  3B 0D 000000D7 R	wCol:		cmp ecx, n ; Mientras ecx sea menor a n, iteramos (iteracion de columnas)
+ 00000059  7D 07					jge ewC
+ 0000005B  3B D9						cmp ebx, ecx ; Si ebx y ecx son iguales, saltamos a la siguiente iteracion
+ 0000005D  74 00						je siFCeq
 									
- 00000067			siFCeq:				
-								
- 00000067  41							inc ecx
- 00000068  EB F1						jmp wCol
- 0000006A  43			ewC:		inc ebx
- 0000006B  EB E6					jmp wFila
- 0000006D			ewF:
+ 0000005F  41			siFCeq:			inc ecx
+ 00000060  EB F1						jmp wCol
+ 00000062  43			ewC:		inc ebx
+ 00000063  EB E6					jmp wFila
+ 00000065			ewF:
 						
- 0000006D  5C					pop esp
+						
 						exit
- 0000006E  6A 00	   *	    push   +000000000h
- 00000070  E8 00000000 E   *	    call   ExitProcess
- 00000075				main ENDP
+ 00000065  6A 00	   *	    push   +000000000h
+ 00000067  E8 00000000 E   *	    call   ExitProcess
+ 0000006C				main ENDP
 					END main
-Microsoft (R) Macro Assembler Version 14.11.25547.0	    11/02/17 17:20:18
+Microsoft (R) Macro Assembler Version 14.11.25547.0	    11/03/17 15:48:26
 main.asm						     Symbols 2 - 1
 
 
@@ -238,8 +245,8 @@ Segments and Groups:
 
 FLAT . . . . . . . . . . . . . .	GROUP
 STACK  . . . . . . . . . . . . .	32 Bit	 00001000 Para	  Stack	  'STACK'	 
-_DATA  . . . . . . . . . . . . .	32 Bit	 000000E3 Para	  Public  'DATA'	
-_TEXT  . . . . . . . . . . . . .	32 Bit	 00000075 Para	  Public  'CODE'	
+_DATA  . . . . . . . . . . . . .	32 Bit	 000000EB Para	  Public  'DATA'	
+_TEXT  . . . . . . . . . . . . .	32 Bit	 0000006C Para	  Public  'CODE'	
 
 
 Procedures, parameters, and locals:
@@ -346,12 +353,12 @@ WriteStackFrame  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External
 WriteString  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteToFile  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteWindowsMsg  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
-main . . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 00000075 Public STDCALL
-  wFila  . . . . . . . . . . . .	L Near	 00000053 _TEXT	
-  wCol . . . . . . . . . . . . .	L Near	 0000005B _TEXT	
-  siFCeq . . . . . . . . . . . .	L Near	 00000067 _TEXT	
-  ewC  . . . . . . . . . . . . .	L Near	 0000006A _TEXT	
-  ewF  . . . . . . . . . . . . .	L Near	 0000006D _TEXT	
+main . . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 0000006C Public STDCALL
+  wFila  . . . . . . . . . . . .	L Near	 0000004B _TEXT	
+  wCol . . . . . . . . . . . . .	L Near	 00000053 _TEXT	
+  siFCeq . . . . . . . . . . . .	L Near	 0000005F _TEXT	
+  ewC  . . . . . . . . . . . . .	L Near	 00000062 _TEXT	
+  ewF  . . . . . . . . . . . . .	L Near	 00000065 _TEXT	
 printf . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
 scanf  . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
 wsprintfA  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
@@ -581,8 +588,10 @@ cyan . . . . . . . . . . . . . .	Number	 00000003h
 destino  . . . . . . . . . . . .	Byte	 000000D6 _DATA	
 dim  . . . . . . . . . . . . . .	DWord	 000000DB _DATA	
 exit . . . . . . . . . . . . . .	Text   	 INVOKE ExitProcess,0
+grafo  . . . . . . . . . . . . .	DWord	 000000E7 _DATA	
 gray . . . . . . . . . . . . . .	Number	 00000008h   
 green  . . . . . . . . . . . . .	Number	 00000002h   
+hhm  . . . . . . . . . . . . . .	DWord	 000000E3 _DATA	
 lightBlue  . . . . . . . . . . .	Number	 00000009h   
 lightCyan  . . . . . . . . . . .	Number	 0000000Bh   
 lightGray  . . . . . . . . . . .	Number	 00000007h   

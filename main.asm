@@ -30,6 +30,12 @@ INCLUDE Irvine32.inc
 	
 	; Numero total de bytes que ocupa la matriz de adyacencia
 	siz DWORD ?
+	
+	; Manejador del Heap
+	hhm DWORD ?
+	
+	; Puntero a la matriz de adyacencia
+	grafo DWORD ?
 
 .CODE
 	main PROC
@@ -43,6 +49,7 @@ INCLUDE Irvine32.inc
 		mov edx, OFFSET nodos
 		call WriteString
 		call ReadDec
+		call Crlf
 		mov n, eax
 		
 		; Inicializamos las variables dim y siz
@@ -52,15 +59,24 @@ INCLUDE Irvine32.inc
 		imul eax, TYPE DWORD
 		mov siz, eax
 		
-		; Inicializamos la matriz de adyacencia en la pila como un arreglo
-		mov eax, siz
-		push esp ; Introducimos el valor de esp a la pila para conservarlo al final del programa
-		sub esp, eax ; Ahora, esp apunta al elemento inicial del arreglo
+		; Preparamos el heap para guardar los datos
+		invoke GetProcessHeap ; Obtenemos el manejador del heap actual, el cual es guardado en eax
+		cmp eax, NULL ; Si no se obtuvo correctamente el manejador, detenemos el programa
+		je nAlloc
+		mov hhm, eax
+		
+		; Inicializamos la matriz de adyacencia en el heap
+		invoke HeapAlloc, hhm, HEAP_ZERO_MEMORY, siz ; Asignamos dinamicamente la memoria para almacenar la matriz de adyacencia (retorna en
+													 ; eax un puntero al bloque de memoria)
+		cmp eax, NULL ; Si no se asigno correctamente el puntero, detenemos el programa
+		je nAlloc
+		mov grafo, eax
 		
 		; PEDIMOS LAS CONEXIONES DEL GRAFO
 		
 		mov ebx, 0 ; Iterador para filas
 		mov ecx, 0 ; Iterador para columnas
+		mov esi, grafo ; Puntero a la matriz de adyacencia
 		
 		; Ejecutamos un ciclo que recorre la matriz de adyacencia, pidiendo la distancia correspondiente desde el nodo referenciado por ebx
 		; al nodo referenciado por ecx
@@ -77,7 +93,11 @@ ewC:		inc ebx
 			jmp wFila
 ewF:
 		
-		pop esp
+		
+
+nAlloc:	
+sAlloc:	invoke HeapFree, hhm, 0, grafo; Liberamos la memoria ocupada por la matriz de adyacencia
+		
 		exit
 	main ENDP
 	END main
