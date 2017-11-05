@@ -13,10 +13,19 @@ INCLUDE Irvine32.inc
 	; Mensaje para pedir la cantidad de nodos
 	nodos BYTE "Ingrese la cantidad de nodos del grafo: ", 0
 
-	; Mensaje para pedir las conexiones en el grafo
-	con1 BYTE "Ingrese la distancia del nodo ", 0
-	con2 BYTE " al nodo ", 0
-	con3 BYTE ": ", 0
+	; Mensajes para pedir las conexiones en el grafo
+	con1 BYTE "Ingrese la cantidad de conexiones del nodo ", 0
+	con2 BYTE ": ", 0
+	con3 BYTE "Ingrese el nodo con el que esta conectado: ", 0
+	con4 BYTE "Ingrese la distancia de la conexion: ", 0
+
+	; Mensaje para informar que la asignacion de memoria fallo
+	fail BYTE "Error: La asignacion de memoria para el grafo fallo.", 0
+
+	; Variables auxiliares para guardar datos numericos en la entrada
+	aux1 DWORD ?
+	aux2 DWORD ?
+	auxF REAL4 ?
 
 	; Datos auxiliares para obtener las conexiones del grafo
 	partida BYTE ?
@@ -39,6 +48,8 @@ INCLUDE Irvine32.inc
 
 .CODE
 	main PROC
+		finit
+		
 		; Imprimimos el mensaje de bienvenida
 		mov edx, OFFSET bienvenida
 		call WriteString
@@ -56,7 +67,7 @@ INCLUDE Irvine32.inc
 		mov eax, n
 		imul eax, n
 		mov dim, eax
-		imul eax, TYPE DWORD
+		imul eax, TYPE REAL4
 		mov siz, eax
 		
 		; Preparamos el heap para guardar los datos
@@ -67,37 +78,75 @@ INCLUDE Irvine32.inc
 		
 		; Inicializamos la matriz de adyacencia en el heap
 		invoke HeapAlloc, hhm, HEAP_ZERO_MEMORY, siz ; Asignamos dinamicamente la memoria para almacenar la matriz de adyacencia (retorna en
-													 ; eax un puntero al bloque de memoria)
-		cmp eax, NULL ; Si no se asigno correctamente el puntero, detenemos el programa
-		je nAlloc
+													 ; eax un puntero al bloque de memoria), inicializando todos los valores con 0
+		cmp eax, NULL ; Si no se asigno correctamente el puntero,
+		je nAlloc	  ; detenemos el programa
 		mov grafo, eax
 		
 		; PEDIMOS LAS CONEXIONES DEL GRAFO
 		
-		mov ebx, 0 ; Iterador para filas
-		mov ecx, 0 ; Iterador para columnas
-		mov esi, grafo ; Puntero a la matriz de adyacencia
-		
-		; Ejecutamos un ciclo que recorre la matriz de adyacencia, pidiendo la distancia correspondiente desde el nodo referenciado por ebx
-		; al nodo referenciado por ecx
-wFila:	cmp ebx, n ; Mientras ebx sea menor a n, iteramos (iteracion de filas)
-		jge ewF
-wCol:		cmp ecx, n ; Mientras ecx sea menor a n, iteramos (iteracion de columnas)
-			jge ewC
-				cmp ebx, ecx ; Si ebx y ecx son iguales, saltamos a la siguiente iteracion
-				je siFCeq
-					
-siFCeq:			inc ecx
-				jmp wCol
-ewC:		inc ebx
-			jmp wFila
-ewF:
-		
+		; Ciclo externo, para pedir la cantidad de conexiones de cada nodo
+		mov ebx, 0
+wN:			cmp ebx, n
+			jge ewN
+			mov edx, OFFSET con1
+			call WriteString
+			mov eax, ebx
+			inc eax
+			call WriteDec
+			mov edx, OFFSET con2
+			call WriteString
+			call ReadDec
+			call Crlf
+			mov aux1, eax
+			
+			; Ciclo interno, para pedir las distancias de las conexiones de cada nodo
+			mov ecx, 0
+wD:				cmp ecx, aux1
+				jge ewD
+				
+				; Pedimos el nodo con el cual esta conectado el nodo actual
+				mov edx, OFFSET con3
+				call WriteString
+				call ReadDec
+				dec eax
+				mov aux2, eax
+				
+				mov edx, OFFSET con4
+				call WriteString
+				call ReadFloat
+				call Crlf
+				
+				; Calculamos la coordenada de la conexion en la matriz de adyacencia y la introducimos
+				mov esi, grafo
+				mov eax, ebx
+				imul eax, n
+				imul eax, TYPE REAL4
+				add esi, eax
+				mov eax, aux2
+				imul eax, TYPE REAL4
+				add esi, eax
+				fstp auxF
+				push auxF
+				pop [esi]
+				
+				inc ecx
+				jmp wD
+ewD:		
+			inc ebx
+			jmp wN
+ewN:	
 		
 
-nAlloc:	
-sAlloc:	invoke HeapFree, hhm, 0, grafo; Liberamos la memoria ocupada por la matriz de adyacencia
+		; Liberamos la memoria ocupada por la matriz de adyacencia
+		invoke HeapFree, hhm, 0, grafo
+		jmp en
 		
+		; En caso de que la asignacion de memoria fallase, le informamos al usuario
+nAlloc:	mov edx, OFFSET fail
+		call WriteString
+		
+en:		
 		exit
 	main ENDP
 	END main
