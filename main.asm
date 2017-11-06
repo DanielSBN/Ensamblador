@@ -25,7 +25,7 @@ INCLUDE Irvine32.inc
 	; Mensaje para informar que la asignacion de memoria fallo
 	fail BYTE "Error: La asignacion de memoria fallo.", 0
 
-	; Variables auxiliares para guardar datos numericos en la entrada
+	; Variables auxiliares para guardar datos temporalmente
 	aux1 DWORD ?
 	aux2 DWORD ?
 	auxF REAL4 ?
@@ -45,7 +45,33 @@ INCLUDE Irvine32.inc
 	; Puntero a la matriz de adyacencia
 	grafo DWORD ?
 
+	; Arreglo de las distancias
+	dists DWORD ?
+
+	; Nodo de partida
+	partida DWORD ?
+
 .CODE
+	Dijkstra PROC, graph: DWORD, distances: DWORD, start: DWORD
+		LOCAL x: DWORD, d: REAL4 ; Creamos variables locales para el procedimiento
+
+		
+		; Movemos a registros los apuntadores
+		mov esi, graph
+		mov edi, distances
+		
+		; Inicializamos la distancia del nodo de partida en 0
+		mov eax, start
+		imul eax, TYPE REAL4
+		push 0
+		pop [esi + eax]
+		
+		; Iteramos para obtener las distancias minimas
+		
+		
+		ret
+	Dijkstra ENDP
+	
 	main PROC
 		finit
 		
@@ -142,6 +168,29 @@ ewN:
 		call WriteString
 		call ReadDec
 		dec eax
+		mov partida, eax
+
+		; Inicializamos el arreglo para almacenar las distancias de la misma manera que la matriz de adyacencia
+		mov ebx, n
+		imul ebx, TYPE REAL4
+		invoke HeapAlloc, hhm, HEAP_ZERO_MEMORY, ebx
+		cmp eax, NULL
+		je nAlloc
+		mov dists, eax
+
+		; Inicializamos el arreglo de distancias con mas infinito
+		mov esi, dists
+		mov ecx, 0
+wN2:		cmp ecx, n
+			jge ewN2
+			mov ebx, ecx
+			imul ebx, TYPE REAL4
+			push 7F800000h ; Representacion de mas infinito
+			pop [esi + ebx]
+			inc ecx
+			jmp wN2
+ewN2:
+
 
 		; Si el programa termina con exito, liberamos la memoria ocupada por la matriz de adyacencia
 		invoke HeapFree, hhm, 0, grafo
