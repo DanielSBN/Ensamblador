@@ -19,17 +19,16 @@ INCLUDE Irvine32.inc
 	con3 BYTE "Ingrese el nodo con el que esta conectado: ", 0
 	con4 BYTE "Ingrese la distancia de la conexion: ", 0
 
+	; Mensaje para pedir el nodo inicial
+	ini BYTE "Ingrese el nodo de partida: ", 0
+
 	; Mensaje para informar que la asignacion de memoria fallo
-	fail BYTE "Error: La asignacion de memoria para el grafo fallo.", 0
+	fail BYTE "Error: La asignacion de memoria fallo.", 0
 
 	; Variables auxiliares para guardar datos numericos en la entrada
 	aux1 DWORD ?
 	aux2 DWORD ?
 	auxF REAL4 ?
-
-	; Datos auxiliares para obtener las conexiones del grafo
-	partida BYTE ?
-	destino BYTE ?
 
 	; Cantidad de nodos del grafo
 	n DWORD ?
@@ -72,8 +71,8 @@ INCLUDE Irvine32.inc
 		
 		; Preparamos el heap para guardar los datos
 		invoke GetProcessHeap ; Obtenemos el manejador del heap actual, el cual es guardado en eax
-		cmp eax, NULL ; Si no se obtuvo correctamente el manejador, detenemos el programa
-		je nAlloc
+		cmp eax, NULL ; Si no se obtuvo correctamente el manejador,
+		je nAlloc	  ; detenemos el programa
 		mov hhm, eax
 		
 		; Inicializamos la matriz de adyacencia en el heap
@@ -89,6 +88,7 @@ INCLUDE Irvine32.inc
 		mov ebx, 0
 wN:			cmp ebx, n
 			jge ewN
+			
 			mov edx, OFFSET con1
 			call WriteString
 			mov eax, ebx
@@ -112,6 +112,7 @@ wD:				cmp ecx, aux1
 				dec eax
 				mov aux2, eax
 				
+				; Pedimos la distancia de la conexion actual
 				mov edx, OFFSET con4
 				call WriteString
 				call ReadFloat
@@ -136,9 +137,13 @@ ewD:
 			inc ebx
 			jmp wN
 ewN:	
-		
+		; Pedimos el nodo de partida
+		mov edx, OFFSET ini
+		call WriteString
+		call ReadDec
+		dec eax
 
-		; Liberamos la memoria ocupada por la matriz de adyacencia
+		; Si el programa termina con exito, liberamos la memoria ocupada por la matriz de adyacencia
 		invoke HeapFree, hhm, 0, grafo
 		jmp en
 		

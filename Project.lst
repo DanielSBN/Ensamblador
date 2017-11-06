@@ -1,4 +1,4 @@
-Microsoft (R) Macro Assembler Version 14.11.25547.0	    11/05/17 10:53:41
+Microsoft (R) Macro Assembler Version 14.11.25547.0	    11/06/17 08:21:58
 main.asm						     Page 1 - 1
 
 
@@ -96,29 +96,35 @@ main.asm						     Page 1 - 1
 	   65 78 69 6F 6E
 	   3A 20 00
 
-					; Variables auxiliares para guardar datos numericos en la entrada
- 0000012A 00000000			aux1 DWORD ?
- 0000012E 00000000			aux2 DWORD ?
- 00000132 00000000			auxF REAL4 ?
+					; Mensaje para informar que la asignacion de memoria fallo
+ 0000012A 45 72 72 6F 72		fail BYTE "Error: La asignacion de memoria fallo.", 0
+	   3A 20 4C 61 20
+	   61 73 69 67 6E
+	   61 63 69 6F 6E
+	   20 64 65 20 6D
+	   65 6D 6F 72 69
+	   61 20 66 61 6C
+	   6C 6F 2E 00
 
-					; Datos auxiliares para obtener las conexiones del grafo
- 00000136 00				partida BYTE ?
- 00000137 00				destino BYTE ?
+					; Variables auxiliares para guardar datos numericos en la entrada
+ 00000151 00000000			aux1 DWORD ?
+ 00000155 00000000			aux2 DWORD ?
+ 00000159 00000000			auxF REAL4 ?
 
 					; Cantidad de nodos del grafo
- 00000138 00000000			n DWORD ?
+ 0000015D 00000000			n DWORD ?
 					
 					; Cantidad total de elementos de la matriz de adyacencia
- 0000013C 00000000			dim DWORD ?
+ 00000161 00000000			dim DWORD ?
 					
 					; Numero total de bytes que ocupa la matriz de adyacencia
- 00000140 00000000			siz DWORD ?
+ 00000165 00000000			siz DWORD ?
 					
 					; Manejador del Heap
- 00000144 00000000			hhm DWORD ?
+ 00000169 00000000			hhm DWORD ?
 					
 					; Puntero a la matriz de adyacencia
- 00000148 00000000			grafo DWORD ?
+ 0000016D 00000000			grafo DWORD ?
 
  00000000			.CODE
  00000000				main PROC
@@ -135,40 +141,41 @@ main.asm						     Page 1 - 1
  0000001C  E8 00000000 E			call WriteString
  00000021  E8 00000000 E			call ReadDec
  00000026  E8 00000000 E			call Crlf
- 0000002B  A3 00000138 R			mov n, eax
+ 0000002B  A3 0000015D R			mov n, eax
 						
 						; Inicializamos las variables dim y siz
- 00000030  A1 00000138 R			mov eax, n
+ 00000030  A1 0000015D R			mov eax, n
  00000035  0F AF 05				imul eax, n
-	   00000138 R
- 0000003C  A3 0000013C R			mov dim, eax
+	   0000015D R
+ 0000003C  A3 00000161 R			mov dim, eax
  00000041  6B C0 04				imul eax, TYPE REAL4
- 00000044  A3 00000140 R			mov siz, eax
+ 00000044  A3 00000165 R			mov siz, eax
 						
 						; Preparamos el heap para guardar los datos
 						invoke GetProcessHeap ; Obtenemos el manejador del heap actual, el cual es guardado en eax
  00000049  E8 00000000 E   *	    call   GetProcessHeap
- 0000004E  83 F8 00				cmp eax, NULL ; Si no se obtuvo correctamente el manejador, detenemos el programa
- 00000051  0F 84 00000107			je nAlloc
- 00000057  A3 00000144 R			mov hhm, eax
+ 0000004E  83 F8 00				cmp eax, NULL ; Si no se obtuvo correctamente el manejador,
+ 00000051  0F 84 00000102			je nAlloc	  ; detenemos el programa
+ 00000057  A3 00000169 R			mov hhm, eax
 						
 						; Inicializamos la matriz de adyacencia en el heap
 						invoke HeapAlloc, hhm, HEAP_ZERO_MEMORY, siz ; Asignamos dinamicamente la memoria para almacenar la matriz de adyacencia (retorna en
- 0000005C  FF 35 00000140 R *	    push   siz
+ 0000005C  FF 35 00000165 R *	    push   siz
  00000062  6A 08	   *	    push   +000000008h
- 00000064  FF 35 00000144 R *	    push   hhm
+ 00000064  FF 35 00000169 R *	    push   hhm
  0000006A  E8 00000000 E   *	    call   HeapAlloc
 																	 ; eax un puntero al bloque de memoria), inicializando todos los valores con 0
- 0000006F  83 F8 00				cmp eax, NULL ; Si no se asigno correctamente el puntero, detenemos el programa
- 00000072  0F 84 000000E6			je nAlloc
- 00000078  A3 00000148 R			mov grafo, eax
+ 0000006F  83 F8 00				cmp eax, NULL ; Si no se asigno correctamente el puntero,
+ 00000072  0F 84 000000E1			je nAlloc	  ; detenemos el programa
+ 00000078  A3 0000016D R			mov grafo, eax
 						
 						; PEDIMOS LAS CONEXIONES DEL GRAFO
 						
 						; Ciclo externo, para pedir la cantidad de conexiones de cada nodo
  0000007D  BB 00000000				mov ebx, 0
- 00000082  3B 1D 00000138 R	wN:			cmp ebx, n
+ 00000082  3B 1D 0000015D R	wN:			cmp ebx, n
  00000088  0F 8D 00000096				jge ewN
+							
  0000008E  BA 000000A9 R				mov edx, OFFSET con1
  00000093  E8 00000000 E				call WriteString
  00000098  8B C3					mov eax, ebx
@@ -178,35 +185,38 @@ main.asm						     Page 1 - 1
  000000A5  E8 00000000 E				call WriteString
  000000AA  E8 00000000 E				call ReadDec
  000000AF  E8 00000000 E				call Crlf
- 000000B4  A3 0000012A R				mov aux1, eax
+ 000000B4  A3 00000151 R				mov aux1, eax
 							
 							; Ciclo interno, para pedir las distancias de las conexiones de cada nodo
  000000B9  B9 00000000					mov ecx, 0
- 000000BE  3B 0D 0000012A R	wD:				cmp ecx, aux1
+ 000000BE  3B 0D 00000151 R	wD:				cmp ecx, aux1
  000000C4  7D 58						jge ewD
+								
+								; Pedimos el nodo con el cual esta conectado el nodo actual
  000000C6  BA 000000D8 R					mov edx, OFFSET con3
  000000CB  E8 00000000 E					call WriteString
  000000D0  E8 00000000 E					call ReadDec
  000000D5  48							dec eax
- 000000D6  A3 0000012E R					mov aux2, eax
+ 000000D6  A3 00000155 R					mov aux2, eax
 								
+								; Pedimos la distancia de la conexion actual
  000000DB  BA 00000104 R					mov edx, OFFSET con4
  000000E0  E8 00000000 E					call WriteString
  000000E5  E8 00000000 E					call ReadFloat
  000000EA  E8 00000000 E					call Crlf
 								
 								; Calculamos la coordenada de la conexion en la matriz de adyacencia y la introducimos
- 000000EF  8B 35 00000148 R					mov esi, grafo
+ 000000EF  8B 35 0000016D R					mov esi, grafo
  000000F5  8B C3						mov eax, ebx
  000000F7  0F AF 05						imul eax, n
-	   00000138 R
+	   0000015D R
  000000FE  6B C0 04						imul eax, TYPE REAL4
  00000101  03 F0						add esi, eax
- 00000103  A1 0000012E R					mov eax, aux2
+ 00000103  A1 00000155 R					mov eax, aux2
  00000108  6B C0 04						imul eax, TYPE REAL4
  0000010B  03 F0						add esi, eax
- 0000010D  D9 1D 00000132 R					fstp auxF
- 00000113  FF 35 00000132 R					push auxF
+ 0000010D  D9 1D 00000159 R					fstp auxF
+ 00000113  FF 35 00000159 R					push auxF
  00000119  8F 06						pop [esi]
 								
  0000011B  41							inc ecx
@@ -215,37 +225,32 @@ main.asm						     Page 1 - 1
  0000011E  43						inc ebx
  0000011F  E9 FFFFFF5E					jmp wN
  00000124			ewN:	
-						
- 00000124  B9 00000000				mov ecx, 0
- 00000129  3B 0D 00000140 R	f1:			cmp ecx, siz
- 0000012F  7D 2D					jge ef1
- 00000131  8B 35 00000148 R				mov esi, grafo
- 00000137  03 F1					add esi, ecx
- 00000139  FF 36					push [esi]
- 0000013B  8F 05 00000132 R				pop auxF
- 00000141  D9 05 00000132 R				fld auxF
- 00000147  E8 00000000 E				call WriteFloat
- 0000014C  B0 20					mov al, ' '
- 0000014E  E8 00000000 E				call WriteChar
- 00000153  D9 1D 00000132 R				fstp auxF
- 00000159  83 C1 04					add ecx, TYPE REAL4
- 0000015C  EB CB					jmp f1
- 0000015E			ef1:		
+ 00000124  C7 05 00000159 R			mov auxF, 7F800000h
+	   7F800000
+ 0000012E  D9 05 00000159 R			fld auxF
+ 00000134  E8 00000000 E			call WriteFloat
+ 00000139  E8 00000000 E			call Crlf
+ 0000013E  D9 1D 00000159 R			fstp auxF
 
- 0000015E  EB 13		nAlloc:	jmp en
- 00000160			sAlloc:	invoke HeapFree, hhm, 0, grafo; Liberamos la memoria ocupada por la matriz de adyacencia
- 00000160  FF 35 00000148 R *	    push   grafo
- 00000166  6A 00	   *	    push   +000000000h
- 00000168  FF 35 00000144 R *	    push   hhm
- 0000016E  E8 00000000 E   *	    call   HeapFree
- 00000173			en:		
+						; Si el programa termina con exito, liberamos la memoria ocupada por la matriz de adyacencia
+						invoke HeapFree, hhm, 0, grafo
+ 00000144  FF 35 0000016D R *	    push   grafo
+ 0000014A  6A 00	   *	    push   +000000000h
+ 0000014C  FF 35 00000169 R *	    push   hhm
+ 00000152  E8 00000000 E   *	    call   HeapFree
+ 00000157  EB 0A				jmp en
 						
+						; En caso de que la asignacion de memoria fallase, le informamos al usuario
+ 00000159  BA 0000012A R	nAlloc:	mov edx, OFFSET fail
+ 0000015E  E8 00000000 E			call WriteString
+						
+ 00000163			en:		
 						exit
- 00000173  6A 00	   *	    push   +000000000h
- 00000175  E8 00000000 E   *	    call   ExitProcess
- 0000017A				main ENDP
+ 00000163  6A 00	   *	    push   +000000000h
+ 00000165  E8 00000000 E   *	    call   ExitProcess
+ 0000016A				main ENDP
 					END main
-Microsoft (R) Macro Assembler Version 14.11.25547.0	    11/05/17 10:53:41
+Microsoft (R) Macro Assembler Version 14.11.25547.0	    11/06/17 08:21:58
 main.asm						     Symbols 2 - 1
 
 
@@ -339,8 +344,8 @@ Segments and Groups:
 
 FLAT . . . . . . . . . . . . . .	GROUP
 STACK  . . . . . . . . . . . . .	32 Bit	 00001000 Para	  Stack	  'STACK'	 
-_DATA  . . . . . . . . . . . . .	32 Bit	 0000014C Para	  Public  'DATA'	
-_TEXT  . . . . . . . . . . . . .	32 Bit	 0000017A Para	  Public  'CODE'	
+_DATA  . . . . . . . . . . . . .	32 Bit	 00000171 Para	  Public  'DATA'	
+_TEXT  . . . . . . . . . . . . .	32 Bit	 0000016A Para	  Public  'CODE'	
 
 
 Procedures, parameters, and locals:
@@ -447,16 +452,13 @@ WriteStackFrame  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External
 WriteString  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteToFile  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteWindowsMsg  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
-main . . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 0000017A Public STDCALL
+main . . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 0000016A Public STDCALL
   wN . . . . . . . . . . . . . .	L Near	 00000082 _TEXT	
   wD . . . . . . . . . . . . . .	L Near	 000000BE _TEXT	
   ewD  . . . . . . . . . . . . .	L Near	 0000011E _TEXT	
   ewN  . . . . . . . . . . . . .	L Near	 00000124 _TEXT	
-  f1 . . . . . . . . . . . . . .	L Near	 00000129 _TEXT	
-  ef1  . . . . . . . . . . . . .	L Near	 0000015E _TEXT	
-  nAlloc . . . . . . . . . . . .	L Near	 0000015E _TEXT	
-  sAlloc . . . . . . . . . . . .	L Near	 00000160 _TEXT	
-  en . . . . . . . . . . . . . .	L Near	 00000173 _TEXT	
+  nAlloc . . . . . . . . . . . .	L Near	 00000159 _TEXT	
+  en . . . . . . . . . . . . . .	L Near	 00000163 _TEXT	
 printf . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
 scanf  . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
 wsprintfA  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
@@ -675,9 +677,9 @@ VK_UP  . . . . . . . . . . . . .	Number	 00000026h
 WINDOW_BUFFER_SIZE_EVENT . . . .	Number	 00000004h   
 WriteConsoleOutputCharacter  . .	Text   	 WriteConsoleOutputCharacterA
 WriteConsole . . . . . . . . . .	Text   	 WriteConsoleA
-aux1 . . . . . . . . . . . . . .	DWord	 0000012A _DATA	
-aux2 . . . . . . . . . . . . . .	DWord	 0000012E _DATA	
-auxF . . . . . . . . . . . . . .	DWord	 00000132 _DATA	
+aux1 . . . . . . . . . . . . . .	DWord	 00000151 _DATA	
+aux2 . . . . . . . . . . . . . .	DWord	 00000155 _DATA	
+auxF . . . . . . . . . . . . . .	DWord	 00000159 _DATA	
 bienvenida . . . . . . . . . . .	Byte	 00000000 _DATA	
 black  . . . . . . . . . . . . .	Number	 00000000h   
 blue . . . . . . . . . . . . . .	Number	 00000001h   
@@ -687,13 +689,13 @@ con2 . . . . . . . . . . . . . .	Byte	 000000D5 _DATA
 con3 . . . . . . . . . . . . . .	Byte	 000000D8 _DATA	
 con4 . . . . . . . . . . . . . .	Byte	 00000104 _DATA	
 cyan . . . . . . . . . . . . . .	Number	 00000003h   
-destino  . . . . . . . . . . . .	Byte	 00000137 _DATA	
-dim  . . . . . . . . . . . . . .	DWord	 0000013C _DATA	
+dim  . . . . . . . . . . . . . .	DWord	 00000161 _DATA	
 exit . . . . . . . . . . . . . .	Text   	 INVOKE ExitProcess,0
-grafo  . . . . . . . . . . . . .	DWord	 00000148 _DATA	
+fail . . . . . . . . . . . . . .	Byte	 0000012A _DATA	
+grafo  . . . . . . . . . . . . .	DWord	 0000016D _DATA	
 gray . . . . . . . . . . . . . .	Number	 00000008h   
 green  . . . . . . . . . . . . .	Number	 00000002h   
-hhm  . . . . . . . . . . . . . .	DWord	 00000144 _DATA	
+hhm  . . . . . . . . . . . . . .	DWord	 00000169 _DATA	
 lightBlue  . . . . . . . . . . .	Number	 00000009h   
 lightCyan  . . . . . . . . . . .	Number	 0000000Bh   
 lightGray  . . . . . . . . . . .	Number	 00000007h   
@@ -702,10 +704,9 @@ lightMagenta . . . . . . . . . .	Number	 0000000Dh
 lightRed . . . . . . . . . . . .	Number	 0000000Ch   
 magenta  . . . . . . . . . . . .	Number	 00000005h   
 nodos  . . . . . . . . . . . . .	Byte	 00000080 _DATA	
-n  . . . . . . . . . . . . . . .	DWord	 00000138 _DATA	
-partida  . . . . . . . . . . . .	Byte	 00000136 _DATA	
+n  . . . . . . . . . . . . . . .	DWord	 0000015D _DATA	
 red  . . . . . . . . . . . . . .	Number	 00000004h   
-siz  . . . . . . . . . . . . . .	DWord	 00000140 _DATA	
+siz  . . . . . . . . . . . . . .	DWord	 00000165 _DATA	
 white  . . . . . . . . . . . . .	Number	 0000000Fh   
 wsprintf . . . . . . . . . . . .	Text   	 wsprintfA
 yellow . . . . . . . . . . . . .	Number	 0000000Eh   
