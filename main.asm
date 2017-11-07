@@ -46,29 +46,121 @@ INCLUDE Irvine32.inc
 	grafo DWORD ?
 
 	; Arreglo de las distancias
-	dists DWORD ?
+	distancias DWORD ?
+	
+	; Arreglo para nodos visitados
+	boo DWORD ?
 
 	; Nodo de partida
 	partida DWORD ?
 
-.CODE
-	Dijkstra PROC, graph: DWORD, distances: DWORD, start: DWORD
-		LOCAL x: DWORD, d: REAL4 ; Creamos variables locales para el procedimiento
+	; Mensaje para la entrega de resultados
+	res BYTE "Nodo ", 0
+	p BYTE ":", 9h, 0
 
+.CODE
+	Dijkstra PROC, graph: DWORD, dists: DWORD, conf: DWORD, start: DWORD
+		LOCAL x: REAL4, j: DWORD, zer: REAL4 ; Creamos variables locales para el procedimiento
 		
-		; Movemos a registros los apuntadores
-		mov esi, graph
-		mov edi, distances
+		finit
 		
 		; Inicializamos la distancia del nodo de partida en 0
+		mov esi, dists
 		mov eax, start
 		imul eax, TYPE REAL4
 		push 0
 		pop [esi + eax]
 		
 		; Iteramos para obtener las distancias minimas
-		
-		
+		mov ebx, 0
+wM:			cmp ebx, n
+			jge ewM
+			
+			; Seleccionamos el menor nodo
+			mov x, 7F800000h
+			mov ecx, 0
+f1:				cmp ecx, n
+				jge ef1
+				mov edi, dists
+				mov edx, ecx
+				imul edx, TYPE REAL4
+				fld REAL4 PTR [edi + edx]
+				fcomp x
+				fnstsw ax
+				sahf
+				jnb less
+					mov esi, conf
+					mov eax, [esi + edx]
+					cmp eax, 0
+					jne less
+						mov j, ecx
+						push [edi + edx]
+						pop x
+less:			inc ecx
+				jmp f1
+ef1:		mov esi, conf
+			mov edx, j
+			imul edx, TYPE REAL4
+			push 1
+			pop [esi + edx]
+			inc ebx
+			
+			mov ecx, 0
+f2:				cmp ecx, n
+				jge ef2
+				mov esi, graph
+				mov edx, j
+				imul edx, n
+				imul edx, TYPE REAL4
+				add esi, edx
+				mov edx, ecx
+				imul edx, TYPE REAL4
+				add esi, edx
+
+				mov zer, 0
+				fld REAL4 PTR [esi]
+				fcom zer
+				je is1
+					mov edi, dists
+					mov edx, j
+					imul edx, TYPE REAL4
+					fadd REAL4 PTR [edi + edx]
+					mov edx, ecx
+					imul edx, TYPE REAL4
+					fcom REAL4 PTR [edi + edx]
+					fnstsw ax
+					sahf
+					jnb is1
+						fst REAL4 PTR [edi + edx]
+is1:			fstp REAL4 PTR[esi]
+				inc ecx
+				jmp f2
+ef2:		jmp wM		
+ewM:		
+		mov esi, dists
+		mov ecx, 0
+pr:			cmp ecx, n
+			jge epr
+				mov edx, OFFSET res
+				call WriteString
+				mov eax, ecx
+				inc eax
+				call WriteDec
+				mov edx, OFFSET p
+				call WriteString
+				
+				mov esi, dists
+				mov edx, ecx
+				imul edx, TYPE REAL4
+				fld REAL4 PTR [esi + edx]
+				call WriteFloat
+				call Crlf
+				fstp REAL4 PTR [esi + edx]
+				
+				inc ecx
+				jmp pr
+epr:	
+
 		ret
 	Dijkstra ENDP
 	
@@ -176,10 +268,10 @@ ewN:
 		invoke HeapAlloc, hhm, HEAP_ZERO_MEMORY, ebx
 		cmp eax, NULL
 		je nAlloc
-		mov dists, eax
+		mov distancias, eax
 
 		; Inicializamos el arreglo de distancias con mas infinito
-		mov esi, dists
+		mov esi, distancias
 		mov ecx, 0
 wN2:		cmp ecx, n
 			jge ewN2
@@ -190,10 +282,20 @@ wN2:		cmp ecx, n
 			inc ecx
 			jmp wN2
 ewN2:
-
+		; Inicializamos un arreglo para comprobar luego en el algoritmo los nodos que ya han sido visitados
+		mov ebx, n
+		invoke HeapAlloc, hhm, HEAP_ZERO_MEMORY, ebx
+		cmp eax, NULL
+		je nAlloc
+		mov boo, eax
+		
+		; Llamamos al procedimiento para ejecutar el algoritmo
+		invoke Dijkstra, grafo, distancias, boo, partida
 
 		; Si el programa termina con exito, liberamos la memoria ocupada por la matriz de adyacencia
 		invoke HeapFree, hhm, 0, grafo
+		invoke HeapFree, hhm, 0, distancias
+		invoke HeapFree, hhm, 0, boo
 		jmp en
 		
 		; En caso de que la asignacion de memoria fallase, le informamos al usuario
