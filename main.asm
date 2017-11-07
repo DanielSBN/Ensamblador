@@ -59,6 +59,47 @@ INCLUDE Irvine32.inc
 	p BYTE ":", 9h, 0
 
 .CODE
+	;--------------------------------------------------------------------------------------------------------
+	IndexarArreglo PROC USES edx,
+		arreglo: DWORD,				; Apuntador al arreglo
+		index: DWORD,				; Indice del elemento
+		tam: DWORD					; Tamano del tipo de dato almacenado en el arreglo
+	; Calcula la direccion de memoria donde se ubica un elemento en un arreglo dado su indice
+	; Devuelve: esi = direccion de memoria del elemento indexado
+	;--------------------------------------------------------------------------------------------------------
+		mov esi, arreglo
+		
+		mov edx, index
+		imul edx, tam
+		add esi, edx
+		
+		ret
+	IndexarArreglo ENDP
+
+	;-------------------------------------------------------------------------------------------------------------------------
+	IndexarMatriz PROC USES edx,
+		matriz: DWORD,				; Apuntador a la matriz
+		na: DWORD,					; Dimension de la matriz
+		fila: DWORD,				; Fila del elemento
+		columna: DWORD,				; Columna del elemento
+		tam: DWORD					; Tamano del tipo de dato almacenado en la matriz
+	; Calcula la direccion de memoria donde se ubica un elemento en una matriz dadas la fila y la columna donde esta ubicado
+	; Devuelve: esi = direccion de memoria del elemento indexado
+	;-------------------------------------------------------------------------------------------------------------------------
+		mov esi, matriz
+		
+		mov edx, columna
+		imul edx, tam
+		add esi, edx
+		
+		mov edx, fila
+		imul edx, na
+		imul edx, tam
+		add esi, edx
+		
+		ret
+	IndexarMatriz ENDP
+	
 	Dijkstra PROC, graph: DWORD, dists: DWORD, conf: DWORD, start: DWORD
 		LOCAL x: REAL4, j: DWORD, zer: REAL4 ; Creamos variables locales para el procedimiento
 		
@@ -237,14 +278,7 @@ wD:				cmp ecx, aux1
 				call Crlf
 				
 				; Calculamos la coordenada de la conexion en la matriz de adyacencia y la introducimos
-				mov esi, grafo
-				mov eax, ebx
-				imul eax, n
-				imul eax, TYPE REAL4
-				add esi, eax
-				mov eax, aux2
-				imul eax, TYPE REAL4
-				add esi, eax
+				invoke IndexarMatriz, grafo, n, ebx, aux2, TYPE REAL4
 				fstp auxF
 				push auxF
 				pop [esi]
@@ -292,7 +326,7 @@ ewN2:
 		; Llamamos al procedimiento para ejecutar el algoritmo
 		invoke Dijkstra, grafo, distancias, boo, partida
 
-		; Si el programa termina con exito, liberamos la memoria ocupada por la matriz de adyacencia
+		; Si el programa termina con exito, liberamos la memoria ocupada por la matriz y los arreglos
 		invoke HeapFree, hhm, 0, grafo
 		invoke HeapFree, hhm, 0, distancias
 		invoke HeapFree, hhm, 0, boo
