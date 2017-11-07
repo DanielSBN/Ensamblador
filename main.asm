@@ -59,14 +59,14 @@ INCLUDE Irvine32.inc
 	p BYTE ":", 9h, 0
 
 .CODE
-	;--------------------------------------------------------------------------------------------------------
+	;------------------------------------------------------------------------------------------
 	IndexarArreglo PROC USES edx,
-		arreglo: DWORD,				; Apuntador al arreglo
-		index: DWORD,				; Indice del elemento
-		tam: DWORD					; Tamano del tipo de dato almacenado en el arreglo
+		arreglo: DWORD,		; Apuntador al arreglo
+		index: DWORD,		; Indice del elemento
+		tam: DWORD			; Tamano del tipo de dato almacenado en el arreglo
 	; Calcula la direccion de memoria donde se ubica un elemento en un arreglo dado su indice
 	; Devuelve: esi = direccion de memoria del elemento indexado
-	;--------------------------------------------------------------------------------------------------------
+	;------------------------------------------------------------------------------------------
 		mov esi, arreglo
 		
 		mov edx, index
@@ -78,11 +78,11 @@ INCLUDE Irvine32.inc
 
 	;-------------------------------------------------------------------------------------------------------------------------
 	IndexarMatriz PROC USES edx,
-		matriz: DWORD,				; Apuntador a la matriz
-		na: DWORD,					; Dimension de la matriz
-		fila: DWORD,				; Fila del elemento
-		columna: DWORD,				; Columna del elemento
-		tam: DWORD					; Tamano del tipo de dato almacenado en la matriz
+		matriz: DWORD,		; Apuntador a la matriz
+		na: DWORD,			; Dimension de la matriz
+		fila: DWORD,		; Fila del elemento
+		columna: DWORD,		; Columna del elemento
+		tam: DWORD			; Tamano del tipo de dato almacenado en la matriz
 	; Calcula la direccion de memoria donde se ubica un elemento en una matriz dadas la fila y la columna donde esta ubicado
 	; Devuelve: esi = direccion de memoria del elemento indexado
 	;-------------------------------------------------------------------------------------------------------------------------
@@ -100,6 +100,19 @@ INCLUDE Irvine32.inc
 		ret
 	IndexarMatriz ENDP
 	
+	;------------------------------------------------------------------------------------------
+	CompararFlotantes PROC USES ax,
+		fc1: REAL4,		; Valor del lado izquierdo de la comparacion
+		fc2: REAL4		; Valor del lado derecho de la comparacion
+	; Compara dos valores de punto flotante y refleja el resultado en el registro de banderas
+	; Devuelve: Resultado de la comparacion en eflags
+	;------------------------------------------------------------------------------------------
+		fld fc1
+		fcomp fc2
+		fnstsw ax
+		sahf
+	CompararFlotantes ENDP
+
 	Dijkstra PROC, graph: DWORD, dists: DWORD, conf: DWORD, start: DWORD
 		LOCAL x: REAL4, j: DWORD, zer: REAL4 ; Creamos variables locales para el procedimiento
 		
