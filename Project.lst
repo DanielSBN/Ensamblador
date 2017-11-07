@@ -1,4 +1,4 @@
-Microsoft (R) Macro Assembler Version 14.11.25547.0	    11/07/17 13:18:36
+Microsoft (R) Macro Assembler Version 14.11.25547.0	    11/07/17 17:00:11
 main.asm						     Page 1 - 1
 
 
@@ -219,294 +219,399 @@ main.asm						     Page 1 - 1
  00000045				CompararFlotantes ENDP
 main.asm(114) : warning A6001:no return from procedure
 
- 00000045				Dijkstra PROC, graph: DWORD, dists: DWORD, conf: DWORD, start: DWORD
-						LOCAL x: REAL4, j: DWORD, zer: REAL4 ; Creamos variables locales para el procedimiento
-						
+					;----------------------------------------------------------------------------------------------------------------------------
+ 00000045				Dijkstra PROC USES ecx,
+						graph: DWORD,	; Apuntador a la matriz de adyacencia
+						dists: DWORD,	; Apuntador al arreglo de distancias
+						conf: DWORD,	; Apuntador al arreglo de visitados
+						start: DWORD	; Numero del nodo incial
+					; Calcula los caminos mas cortos en un grafo desde el nodo de partida al resto de los nodos usando el algoritmo de Dijkstra
+					; Devuelve: Caminos mas cortos a cada nodo en el arreglo de distancias
+					;----------------------------------------------------------------------------------------------------------------------------
+						LOCAL vis: BYTE,	; Variable local para verificar si todos los nodos fueron explorados
+							x: DWORD,	; Variable local para obtener el nodo con la distancia mas pequena
+							d: REAL4	; Variable local para obtener la distancia mas pequena
+
+						; Para cada nodo del grafo, inicializamos las distancias iniciales
  00000045  55		   *	    push   ebp
  00000046  8B EC	   *	    mov    ebp, esp
  00000048  83 C4 F4	   *	    add    esp, 0FFFFFFF4h
- 0000004B  9B DB E3				finit
+ 0000004B  51		   *	    push   ecx
+ 0000004C  B9 00000000				mov ecx, 0
+ 00000051  3B 0D 0000017A R	wInit:	cmp ecx, n
+ 00000057  7D 38				jge ewInit
+							invoke IndexarArreglo, dists, ecx, TYPE REAL4
+ 00000059  6A 04	   *	    push   +000000004h
+ 0000005B  51		   *	    push   ecx
+ 0000005C  FF 75 0C	   *	    push   dword  ptr ss:[ebp]+00000000Ch
+ 0000005F  E8 FFFFFF9C	   *	    call   IndexarArreglo
+ 00000064  8B FE					mov edi, esi
+							invoke IndexarMatriz, graph, n, start, ecx, TYPE REAL4
+ 00000066  6A 04	   *	    push   +000000004h
+ 00000068  51		   *	    push   ecx
+ 00000069  FF 75 14	   *	    push   dword  ptr ss:[ebp]+000000014h
+ 0000006C  FF 35 0000017A R *	    push   n
+ 00000072  FF 75 08	   *	    push   dword  ptr ss:[ebp]+000000008h
+ 00000075  E8 FFFFFF9B	   *	    call   IndexarMatriz
+							
+ 0000007A  8B 06					mov eax, [esi]
+ 0000007C  83 F8 00					cmp eax, 0
+ 0000007F  74 06					je if0
+ 00000081  FF 36						push [esi]	; Si existe conexion entre el nodo inicial y el nodo actual,
+ 00000083  8F 07						pop [edi]	; hacemos la distancia inicial igual a la distancia de su conexion
+ 00000085  EB 07						jmp e0
+ 00000087  68 7F800000		if0:			push 7F800000h	; Si no existe conexion entre los nodos,
+ 0000008C  8F 07						pop [edi]		; la distancia inicial es igual a infinito
+ 0000008E			e0:			
+ 0000008E  41						inc ecx
+ 0000008F  EB C0					jmp wInit
+ 00000091			ewInit:	
+						; Inicializamos la distancia minima del nodo inicial en 0
+						invoke IndexarArreglo, dists, start, TYPE REAL4
+ 00000091  6A 04	   *	    push   +000000004h
+ 00000093  FF 75 14	   *	    push   dword  ptr ss:[ebp]+000000014h
+ 00000096  FF 75 0C	   *	    push   dword  ptr ss:[ebp]+00000000Ch
+ 00000099  E8 FFFFFF62	   *	    call   IndexarArreglo
+ 0000009E  6A 00				push 0
+ 000000A0  8F 06				pop [esi]
+
+						; Marcamos como visitado el nodo inicial
+						invoke IndexarArreglo, conf, start, TYPE BYTE
+ 000000A2  6A 01	   *	    push   +000000001h
+ 000000A4  FF 75 14	   *	    push   dword  ptr ss:[ebp]+000000014h
+ 000000A7  FF 75 10	   *	    push   dword  ptr ss:[ebp]+000000010h
+ 000000AA  E8 FFFFFF51	   *	    call   IndexarArreglo
+ 000000AF  6A 01				push 1
+ 000000B1  8F 06				pop [esi]
+
+ 000000B3  C6 45 FF 01				mov vis, 1
+
+						; Iteramos para verificar si todos los nodos estan explorados
+ 000000B7  BB 00000000				mov ebx, 0
+ 000000BC  3B 1D 0000017A R	wVis:	cmp ebx, n
+ 000000C2  7D 1A				jge ewVis
+							invoke IndexarArreglo, conf, ebx, TYPE BYTE
+ 000000C4  6A 01	   *	    push   +000000001h
+ 000000C6  53		   *	    push   ebx
+ 000000C7  FF 75 10	   *	    push   dword  ptr ss:[ebp]+000000010h
+ 000000CA  E8 FFFFFF31	   *	    call   IndexarArreglo
+ 000000CF  8A 06					mov al, [esi]
+ 000000D1  3C 00					cmp al, 0
+ 000000D3  75 06					jne brv
+ 000000D5  C6 45 FF 00						mov vis, 0
+ 000000D9  EB 03						jmp ewVis
+ 000000DB  43			brv:			inc ebx
+ 000000DC  EB DE						jmp wVis
+ 000000DE			ewVis:
+						; Si aun no se han explorado todos los nodos, calculamos las distancias minimas para esta iteracion
+ 000000DE  80 7D FF 00				cmp vis, 0
+ 000000E2  75 49				jne emin
+ 000000E4  C7 45 F4					mov d, 7F800000h
+	   7F800000
+
+							; Seleccionamos el vertice no-explorado con la distancia minima
+ 000000EB  B9 00000000					mov ecx, 0
+ 000000F0  3B 0D 0000017A R	exp:		cmp ecx, n
+ 000000F6  7D 35					jge eexp
+								invoke IndexarArreglo, dists, ecx, TYPE REAL4
+ 000000F8  6A 04	   *	    push   +000000004h
+ 000000FA  51		   *	    push   ecx
+ 000000FB  FF 75 0C	   *	    push   dword  ptr ss:[ebp]+00000000Ch
+ 000000FE  E8 FFFFFEFD	   *	    call   IndexarArreglo
+ 00000103  8B FE						mov edi, esi
+								invoke IndexarArreglo, conf, ecx, TYPE BYTE
+ 00000105  6A 01	   *	    push   +000000001h
+ 00000107  51		   *	    push   ecx
+ 00000108  FF 75 10	   *	    push   dword  ptr ss:[ebp]+000000010h
+ 0000010B  E8 FFFFFEF0	   *	    call   IndexarArreglo
+ 00000110  8A 06						mov al, [esi]
+ 00000112  3C 00						cmp al, 0
+ 00000114  74 14						je nd
+									invoke CompararFlotantes, [edi], d
+ 00000116  FF 75 F4	   *	    push   dword  ptr ss:[ebp]+0FFFFFFF4h
+ 00000119  FF 37	   *	    push   dword  ptr [edi]
+ 0000011B  E8 FFFFFF17	   *	    call   CompararFlotantes
+ 00000120  73 08							jnb nd
+ 00000122  FF 37								push [edi]
+ 00000124  8F 45 F4								pop d
+ 00000127  89 4D F8								mov x, ecx
+ 0000012A  41			nd:				inc ecx
+ 0000012B  EB C3						jmp exp
+ 0000012D			eexp:
+							
+ 0000012D			emin:	
+
+						COMMENT @
+						LOCAL x: REAL4, j: DWORD, zer: REAL4 ; Creamos variables locales para el procedimiento
+						
+						finit
 						
 						; Inicializamos la distancia del nodo de partida en 0
- 0000004E  8B 75 0C				mov esi, dists
- 00000051  8B 45 14				mov eax, start
- 00000054  6B C0 04				imul eax, TYPE REAL4
- 00000057  6A 00				push 0
- 00000059  8F 04 06				pop [esi + eax]
+						mov esi, dists
+						mov eax, start
+						imul eax, TYPE REAL4
+						push 0
+						pop [esi + eax]
 						
 						; Iteramos para obtener las distancias minimas
- 0000005C  BB 00000000				mov ebx, 0
- 00000061  3B 1D 0000017A R	wM:			cmp ebx, n
- 00000067  0F 8D 000000A7				jge ewM
+						mov ebx, 0
+				wM:			cmp ebx, n
+							jge ewM
 							
 							; Seleccionamos el menor nodo
- 0000006D  C7 45 FC					mov x, 7F800000h
-	   7F800000
- 00000074  B9 00000000					mov ecx, 0
- 00000079  3B 0D 0000017A R	f1:				cmp ecx, n
- 0000007F  7D 2A						jge ef1
- 00000081  8B 7D 0C						mov edi, dists
- 00000084  8B D1						mov edx, ecx
- 00000086  6B D2 04						imul edx, TYPE REAL4
- 00000089  D9 04 17						fld REAL4 PTR [edi + edx]
- 0000008C  D8 5D FC						fcomp x
- 0000008F  DF E0						fnstsw ax
- 00000091  9E							sahf
- 00000092  73 14						jnb less
- 00000094  8B 75 10							mov esi, conf
- 00000097  8B 04 16							mov eax, [esi + edx]
- 0000009A  83 F8 00							cmp eax, 0
- 0000009D  75 09							jne less
- 0000009F  89 4D F8								mov j, ecx
- 000000A2  FF 34 17								push [edi + edx]
- 000000A5  8F 45 FC								pop x
- 000000A8  41			less:			inc ecx
- 000000A9  EB CE						jmp f1
- 000000AB  8B 75 10		ef1:		mov esi, conf
- 000000AE  8B 55 F8					mov edx, j
- 000000B1  6B D2 04					imul edx, TYPE REAL4
- 000000B4  6A 01					push 1
- 000000B6  8F 04 16					pop [esi + edx]
- 000000B9  43						inc ebx
+							mov x, 7F800000h
+							mov ecx, 0
+				f1:				cmp ecx, n
+								jge ef1
+								mov edi, dists
+								mov edx, ecx
+								imul edx, TYPE REAL4
+								fld REAL4 PTR [edi + edx]
+								fcomp x
+								fnstsw ax
+								sahf
+								jnb less
+									mov esi, conf
+									mov eax, [esi + edx]
+									cmp eax, 0
+									jne less
+										mov j, ecx
+										push [edi + edx]
+										pop x
+				less:			inc ecx
+								jmp f1
+				ef1:		mov esi, conf
+							mov edx, j
+							imul edx, TYPE REAL4
+							push 1
+							pop [esi + edx]
+							inc ebx
 							
- 000000BA  B9 00000000					mov ecx, 0
- 000000BF  3B 0D 0000017A R	f2:				cmp ecx, n
- 000000C5  7D 48						jge ef2
- 000000C7  8B 75 08						mov esi, graph
- 000000CA  8B 55 F8						mov edx, j
- 000000CD  0F AF 15						imul edx, n
-	   0000017A R
- 000000D4  6B D2 04						imul edx, TYPE REAL4
- 000000D7  03 F2						add esi, edx
- 000000D9  8B D1						mov edx, ecx
- 000000DB  6B D2 04						imul edx, TYPE REAL4
- 000000DE  03 F2						add esi, edx
+							mov ecx, 0
+				f2:				cmp ecx, n
+								jge ef2
+								mov esi, graph
+								mov edx, j
+								imul edx, n
+								imul edx, TYPE REAL4
+								add esi, edx
+								mov edx, ecx
+								imul edx, TYPE REAL4
+								add esi, edx
 
- 000000E0  C7 45 F4						mov zer, 0
-	   00000000
- 000000E7  D9 06						fld REAL4 PTR [esi]
- 000000E9  D8 55 F4						fcom zer
- 000000EC  74 1C						je is1
- 000000EE  8B 7D 0C							mov edi, dists
- 000000F1  8B 55 F8							mov edx, j
- 000000F4  6B D2 04							imul edx, TYPE REAL4
- 000000F7  D8 04 17							fadd REAL4 PTR [edi + edx]
- 000000FA  8B D1							mov edx, ecx
- 000000FC  6B D2 04							imul edx, TYPE REAL4
- 000000FF  D8 14 17							fcom REAL4 PTR [edi + edx]
- 00000102  DF E0							fnstsw ax
- 00000104  9E								sahf
- 00000105  73 03							jnb is1
- 00000107  D9 14 17								fst REAL4 PTR [edi + edx]
- 0000010A  D9 1E		is1:			fstp REAL4 PTR[esi]
- 0000010C  41							inc ecx
- 0000010D  EB B0						jmp f2
- 0000010F  E9 FFFFFF4D		ef2:		jmp wM		
- 00000114			ewM:		
- 00000114  8B 75 0C				mov esi, dists
- 00000117  B9 00000000				mov ecx, 0
- 0000011C  3B 0D 0000017A R	pr:			cmp ecx, n
- 00000122  7D 37					jge epr
- 00000124  BA 0000019A R					mov edx, OFFSET res
- 00000129  E8 00000000 E					call WriteString
- 0000012E  8B C1						mov eax, ecx
- 00000130  40							inc eax
- 00000131  E8 00000000 E					call WriteDec
- 00000136  BA 000001A0 R					mov edx, OFFSET p
- 0000013B  E8 00000000 E					call WriteString
+								mov zer, 0
+								fld REAL4 PTR [esi]
+								fcom zer
+								je is1
+									mov edi, dists
+									mov edx, j
+									imul edx, TYPE REAL4
+									fadd REAL4 PTR [edi + edx]
+									mov edx, ecx
+									imul edx, TYPE REAL4
+									fcom REAL4 PTR [edi + edx]
+									fnstsw ax
+									sahf
+									jnb is1
+										fst REAL4 PTR [edi + edx]
+				is1:			fstp REAL4 PTR[esi]
+								inc ecx
+								jmp f2
+				ef2:		jmp wM		
+				ewM:		
+						mov esi, dists
+						mov ecx, 0
+				pr:			cmp ecx, n
+							jge epr
+								mov edx, OFFSET res
+								call WriteString
+								mov eax, ecx
+								inc eax
+								call WriteDec
+								mov edx, OFFSET p
+								call WriteString
 								
- 00000140  8B 75 0C						mov esi, dists
- 00000143  8B D1						mov edx, ecx
- 00000145  6B D2 04						imul edx, TYPE REAL4
- 00000148  D9 04 16						fld REAL4 PTR [esi + edx]
- 0000014B  E8 00000000 E					call WriteFloat
- 00000150  E8 00000000 E					call Crlf
- 00000155  D9 1C 16						fstp REAL4 PTR [esi + edx]
+								mov esi, dists
+								mov edx, ecx
+								imul edx, TYPE REAL4
+								fld REAL4 PTR [esi + edx]
+								call WriteFloat
+								call Crlf
+								fstp REAL4 PTR [esi + edx]
 								
- 00000158  41							inc ecx
- 00000159  EB C1						jmp pr
- 0000015B			epr:	
-
+								inc ecx
+								jmp pr
+				epr:	
+						@
 						ret
- 0000015B  C9		   *	    leave  
- 0000015C  C2 0010	   *	    ret    00010h
- 0000015F				Dijkstra ENDP
+ 0000012D  59		   *	    pop    ecx
+ 0000012E  C9		   *	    leave  
+ 0000012F  C2 0010	   *	    ret    00010h
+ 00000132				Dijkstra ENDP
 					
- 0000015F				main PROC
- 0000015F  9B DB E3				finit
+ 00000132				main PROC
+ 00000132  9B DB E3				finit
 						
 						; Imprimimos el mensaje de bienvenida
- 00000162  BA 00000000 R			mov edx, OFFSET bienvenida
- 00000167  E8 00000000 E			call WriteString
- 0000016C  E8 00000000 E			call Crlf
- 00000171  E8 00000000 E			call Crlf
+ 00000135  BA 00000000 R			mov edx, OFFSET bienvenida
+ 0000013A  E8 00000000 E			call WriteString
+ 0000013F  E8 00000000 E			call Crlf
+ 00000144  E8 00000000 E			call Crlf
 
 						; Pedimos la cantidad de nodos del grafo
- 00000176  BA 00000080 R			mov edx, OFFSET nodos
- 0000017B  E8 00000000 E			call WriteString
- 00000180  E8 00000000 E			call ReadDec
- 00000185  E8 00000000 E			call Crlf
- 0000018A  A3 0000017A R			mov n, eax
+ 00000149  BA 00000080 R			mov edx, OFFSET nodos
+ 0000014E  E8 00000000 E			call WriteString
+ 00000153  E8 00000000 E			call ReadDec
+ 00000158  E8 00000000 E			call Crlf
+ 0000015D  A3 0000017A R			mov n, eax
 						
 						; Inicializamos las variables dim y siz
- 0000018F  A1 0000017A R			mov eax, n
- 00000194  0F AF 05				imul eax, n
+ 00000162  A1 0000017A R			mov eax, n
+ 00000167  0F AF 05				imul eax, n
 	   0000017A R
- 0000019B  A3 0000017E R			mov dim, eax
- 000001A0  6B C0 04				imul eax, TYPE REAL4
- 000001A3  A3 00000182 R			mov siz, eax
+ 0000016E  A3 0000017E R			mov dim, eax
+ 00000173  6B C0 04				imul eax, TYPE REAL4
+ 00000176  A3 00000182 R			mov siz, eax
 						
 						; Preparamos el heap para guardar los datos
-						invoke GetProcessHeap ; Obtenemos el manejador del heap actual, el cual es guardado en eax
- 000001A8  E8 00000000 E   *	    call   GetProcessHeap
- 000001AD  83 F8 00				cmp eax, NULL ; Si no se obtuvo correctamente el manejador,
- 000001B0  0F 84 0000019C			je nAlloc	  ; detenemos el programa
- 000001B6  A3 00000186 R			mov hhm, eax
+						invoke GetProcessHeap	; Obtenemos el manejador del heap actual, el cual es guardado en eax
+ 0000017B  E8 00000000 E   *	    call   GetProcessHeap
+ 00000180  83 F8 00				cmp eax, NULL	; Si no se obtuvo correctamente el manejador,
+ 00000183  0F 84 00000175			je nAlloc		; detenemos el programa
+ 00000189  A3 00000186 R			mov hhm, eax
 						
 						; Inicializamos la matriz de adyacencia en el heap
-						invoke HeapAlloc, hhm, HEAP_ZERO_MEMORY, siz ; Asignamos dinamicamente la memoria para almacenar la matriz de adyacencia (retorna en
- 000001BB  FF 35 00000182 R *	    push   siz
- 000001C1  6A 08	   *	    push   +000000008h
- 000001C3  FF 35 00000186 R *	    push   hhm
- 000001C9  E8 00000000 E   *	    call   HeapAlloc
-																	 ; eax un puntero al bloque de memoria), inicializando todos los valores con 0
- 000001CE  83 F8 00				cmp eax, NULL ; Si no se asigno correctamente el puntero,
- 000001D1  0F 84 0000017B			je nAlloc	  ; detenemos el programa
- 000001D7  A3 0000018A R			mov grafo, eax
+						invoke HeapAlloc, hhm, HEAP_ZERO_MEMORY, siz	; Asignamos dinamicamente la memoria para almacenar la matriz de adyacencia (retorna
+ 0000018E  FF 35 00000182 R *	    push   siz
+ 00000194  6A 08	   *	    push   +000000008h
+ 00000196  FF 35 00000186 R *	    push   hhm
+ 0000019C  E8 00000000 E   *	    call   HeapAlloc
+																		; en eax un puntero al bloque de memoria), inicializando todos los valores con 0
+ 000001A1  83 F8 00				cmp eax, NULL	; Si no se asigno correctamente el puntero,
+ 000001A4  0F 84 00000154			je nAlloc		; detenemos el programa
+ 000001AA  A3 0000018A R			mov grafo, eax
 						
 						; PEDIMOS LAS CONEXIONES DEL GRAFO
 						
 						; Ciclo externo, para pedir la cantidad de conexiones de cada nodo
- 000001DC  BB 00000000				mov ebx, 0
- 000001E1  3B 1D 0000017A R	wN:			cmp ebx, n
- 000001E7  0F 8D 00000092				jge ewN
+ 000001AF  BB 00000000				mov ebx, 0
+ 000001B4  3B 1D 0000017A R	wN:			cmp ebx, n
+ 000001BA  0F 8D 00000092				jge ewN
 							
- 000001ED  BA 000000A9 R				mov edx, OFFSET con1
- 000001F2  E8 00000000 E				call WriteString
- 000001F7  8B C3					mov eax, ebx
- 000001F9  40						inc eax
- 000001FA  E8 00000000 E				call WriteDec
- 000001FF  BA 000000D5 R				mov edx, OFFSET con2
- 00000204  E8 00000000 E				call WriteString
- 00000209  E8 00000000 E				call ReadDec
- 0000020E  E8 00000000 E				call Crlf
- 00000213  A3 0000016E R				mov aux1, eax
+ 000001C0  BA 000000A9 R				mov edx, OFFSET con1
+ 000001C5  E8 00000000 E				call WriteString
+ 000001CA  8B C3					mov eax, ebx
+ 000001CC  40						inc eax
+ 000001CD  E8 00000000 E				call WriteDec
+ 000001D2  BA 000000D5 R				mov edx, OFFSET con2
+ 000001D7  E8 00000000 E				call WriteString
+ 000001DC  E8 00000000 E				call ReadDec
+ 000001E1  E8 00000000 E				call Crlf
+ 000001E6  A3 0000016E R				mov aux1, eax
 							
 							; Ciclo interno, para pedir las distancias de las conexiones de cada nodo
- 00000218  B9 00000000					mov ecx, 0
- 0000021D  3B 0D 0000016E R	wD:				cmp ecx, aux1
- 00000223  7D 54						jge ewD
+ 000001EB  B9 00000000					mov ecx, 0
+ 000001F0  3B 0D 0000016E R	wD:				cmp ecx, aux1
+ 000001F6  7D 54						jge ewD
 								
 								; Pedimos el nodo con el cual esta conectado el nodo actual
- 00000225  BA 000000D8 R					mov edx, OFFSET con3
- 0000022A  E8 00000000 E					call WriteString
- 0000022F  E8 00000000 E					call ReadDec
- 00000234  48							dec eax
- 00000235  A3 00000172 R					mov aux2, eax
+ 000001F8  BA 000000D8 R					mov edx, OFFSET con3
+ 000001FD  E8 00000000 E					call WriteString
+ 00000202  E8 00000000 E					call ReadDec
+ 00000207  48							dec eax
+ 00000208  A3 00000172 R					mov aux2, eax
 								
 								; Pedimos la distancia de la conexion actual
- 0000023A  BA 00000104 R					mov edx, OFFSET con4
- 0000023F  E8 00000000 E					call WriteString
- 00000244  E8 00000000 E					call ReadFloat
- 00000249  E8 00000000 E					call Crlf
+ 0000020D  BA 00000104 R					mov edx, OFFSET con4
+ 00000212  E8 00000000 E					call WriteString
+ 00000217  E8 00000000 E					call ReadFloat
+ 0000021C  E8 00000000 E					call Crlf
 								
 								; Calculamos la coordenada de la conexion en la matriz de adyacencia y la introducimos
 								invoke IndexarMatriz, grafo, n, ebx, aux2, TYPE REAL4
- 0000024E  6A 04	   *	    push   +000000004h
- 00000250  FF 35 00000172 R *	    push   aux2
- 00000256  53		   *	    push   ebx
- 00000257  FF 35 0000017A R *	    push   n
- 0000025D  FF 35 0000018A R *	    push   grafo
- 00000263  E8 FFFFFDAD	   *	    call   IndexarMatriz
- 00000268  D9 1D 00000176 R					fstp auxF
- 0000026E  FF 35 00000176 R					push auxF
- 00000274  8F 06						pop [esi]
+ 00000221  6A 04	   *	    push   +000000004h
+ 00000223  FF 35 00000172 R *	    push   aux2
+ 00000229  53		   *	    push   ebx
+ 0000022A  FF 35 0000017A R *	    push   n
+ 00000230  FF 35 0000018A R *	    push   grafo
+ 00000236  E8 FFFFFDDA	   *	    call   IndexarMatriz
+ 0000023B  D9 1D 00000176 R					fstp auxF
+ 00000241  FF 35 00000176 R					push auxF
+ 00000247  8F 06						pop [esi]
 								
- 00000276  41							inc ecx
- 00000277  EB A4						jmp wD
- 00000279			ewD:		
- 00000279  43						inc ebx
- 0000027A  E9 FFFFFF62					jmp wN
- 0000027F			ewN:	
+ 00000249  41							inc ecx
+ 0000024A  EB A4						jmp wD
+ 0000024C			ewD:		
+ 0000024C  43						inc ebx
+ 0000024D  E9 FFFFFF62					jmp wN
+ 00000252			ewN:	
 						; Pedimos el nodo de partida
- 0000027F  BA 0000012A R			mov edx, OFFSET ini
- 00000284  E8 00000000 E			call WriteString
- 00000289  E8 00000000 E			call ReadDec
- 0000028E  48					dec eax
- 0000028F  A3 00000196 R			mov partida, eax
+ 00000252  BA 0000012A R			mov edx, OFFSET ini
+ 00000257  E8 00000000 E			call WriteString
+ 0000025C  E8 00000000 E			call ReadDec
+ 00000261  48					dec eax
+ 00000262  A3 00000196 R			mov partida, eax
 
-						; Inicializamos el arreglo para almacenar las distancias de la misma manera que la matriz de adyacencia
- 00000294  8B 1D 0000017A R			mov ebx, n
- 0000029A  6B DB 04				imul ebx, TYPE REAL4
+						; Inicializamos en el heap el arreglo para almacenar las distancias de la misma manera que la matriz de adyacencia
+ 00000267  8B 1D 0000017A R			mov ebx, n
+ 0000026D  6B DB 04				imul ebx, TYPE REAL4
 						invoke HeapAlloc, hhm, HEAP_ZERO_MEMORY, ebx
- 0000029D  53		   *	    push   ebx
- 0000029E  6A 08	   *	    push   +000000008h
- 000002A0  FF 35 00000186 R *	    push   hhm
- 000002A6  E8 00000000 E   *	    call   HeapAlloc
- 000002AB  83 F8 00				cmp eax, NULL
- 000002AE  0F 84 0000009E			je nAlloc
- 000002B4  A3 0000018E R			mov distancias, eax
+ 00000270  53		   *	    push   ebx
+ 00000271  6A 08	   *	    push   +000000008h
+ 00000273  FF 35 00000186 R *	    push   hhm
+ 00000279  E8 00000000 E   *	    call   HeapAlloc
+ 0000027E  83 F8 00				cmp eax, NULL
+ 00000281  74 7B				je nAlloc
+ 00000283  A3 0000018E R			mov distancias, eax
 
-						; Inicializamos el arreglo de distancias con mas infinito
- 000002B9  8B 35 0000018E R			mov esi, distancias
- 000002BF  B9 00000000				mov ecx, 0
- 000002C4  3B 0D 0000017A R	wN2:		cmp ecx, n
- 000002CA  7D 10					jge ewN2
- 000002CC  8B D9					mov ebx, ecx
- 000002CE  6B DB 04					imul ebx, TYPE REAL4
- 000002D1  68 7F800000					push 7F800000h ; Representacion de mas infinito
- 000002D6  8F 04 1E					pop [esi + ebx]
- 000002D9  41						inc ecx
- 000002DA  EB E8					jmp wN2
- 000002DC			ewN2:
-						; Inicializamos un arreglo para comprobar luego en el algoritmo los nodos que ya han sido visitados
- 000002DC  8B 1D 0000017A R			mov ebx, n
+						; Inicializamos en el heap un arreglo para comprobar luego en el algoritmo los nodos que ya han sido visitados
+ 00000288  8B 1D 0000017A R			mov ebx, n
 						invoke HeapAlloc, hhm, HEAP_ZERO_MEMORY, ebx
- 000002E2  53		   *	    push   ebx
- 000002E3  6A 08	   *	    push   +000000008h
- 000002E5  FF 35 00000186 R *	    push   hhm
- 000002EB  E8 00000000 E   *	    call   HeapAlloc
- 000002F0  83 F8 00				cmp eax, NULL
- 000002F3  74 5D				je nAlloc
- 000002F5  A3 00000192 R			mov boo, eax
+ 0000028E  53		   *	    push   ebx
+ 0000028F  6A 08	   *	    push   +000000008h
+ 00000291  FF 35 00000186 R *	    push   hhm
+ 00000297  E8 00000000 E   *	    call   HeapAlloc
+ 0000029C  83 F8 00				cmp eax, NULL
+ 0000029F  74 5D				je nAlloc
+ 000002A1  A3 00000192 R			mov boo, eax
 						
 						; Llamamos al procedimiento para ejecutar el algoritmo
 						invoke Dijkstra, grafo, distancias, boo, partida
- 000002FA  FF 35 00000196 R *	    push   partida
- 00000300  FF 35 00000192 R *	    push   boo
- 00000306  FF 35 0000018E R *	    push   distancias
- 0000030C  FF 35 0000018A R *	    push   grafo
- 00000312  E8 FFFFFD2E	   *	    call   Dijkstra
+ 000002A6  FF 35 00000196 R *	    push   partida
+ 000002AC  FF 35 00000192 R *	    push   boo
+ 000002B2  FF 35 0000018E R *	    push   distancias
+ 000002B8  FF 35 0000018A R *	    push   grafo
+ 000002BE  E8 FFFFFD82	   *	    call   Dijkstra
 
 						; Si el programa termina con exito, liberamos la memoria ocupada por la matriz y los arreglos
 						invoke HeapFree, hhm, 0, grafo
- 00000317  FF 35 0000018A R *	    push   grafo
- 0000031D  6A 00	   *	    push   +000000000h
- 0000031F  FF 35 00000186 R *	    push   hhm
- 00000325  E8 00000000 E   *	    call   HeapFree
+ 000002C3  FF 35 0000018A R *	    push   grafo
+ 000002C9  6A 00	   *	    push   +000000000h
+ 000002CB  FF 35 00000186 R *	    push   hhm
+ 000002D1  E8 00000000 E   *	    call   HeapFree
 						invoke HeapFree, hhm, 0, distancias
- 0000032A  FF 35 0000018E R *	    push   distancias
- 00000330  6A 00	   *	    push   +000000000h
- 00000332  FF 35 00000186 R *	    push   hhm
- 00000338  E8 00000000 E   *	    call   HeapFree
+ 000002D6  FF 35 0000018E R *	    push   distancias
+ 000002DC  6A 00	   *	    push   +000000000h
+ 000002DE  FF 35 00000186 R *	    push   hhm
+ 000002E4  E8 00000000 E   *	    call   HeapFree
 						invoke HeapFree, hhm, 0, boo
- 0000033D  FF 35 00000192 R *	    push   boo
- 00000343  6A 00	   *	    push   +000000000h
- 00000345  FF 35 00000186 R *	    push   hhm
- 0000034B  E8 00000000 E   *	    call   HeapFree
- 00000350  EB 0A				jmp en
+ 000002E9  FF 35 00000192 R *	    push   boo
+ 000002EF  6A 00	   *	    push   +000000000h
+ 000002F1  FF 35 00000186 R *	    push   hhm
+ 000002F7  E8 00000000 E   *	    call   HeapFree
+ 000002FC  EB 0A				jmp en
 						
 						; En caso de que la asignacion de memoria fallase, le informamos al usuario
- 00000352  BA 00000147 R	nAlloc:	mov edx, OFFSET fail
- 00000357  E8 00000000 E			call WriteString
+ 000002FE  BA 00000147 R	nAlloc:	mov edx, OFFSET fail
+ 00000303  E8 00000000 E			call WriteString
 						
- 0000035C			en:		
+ 00000308			en:		
 						exit
- 0000035C  6A 00	   *	    push   +000000000h
- 0000035E  E8 00000000 E   *	    call   ExitProcess
- 00000363				main ENDP
+ 00000308  6A 00	   *	    push   +000000000h
+ 0000030A  E8 00000000 E   *	    call   ExitProcess
+ 0000030F				main ENDP
 					END main
-Microsoft (R) Macro Assembler Version 14.11.25547.0	    11/07/17 13:18:36
+Microsoft (R) Macro Assembler Version 14.11.25547.0	    11/07/17 17:00:11
 main.asm						     Symbols 2 - 1
 
 
@@ -601,7 +706,7 @@ Segments and Groups:
 FLAT . . . . . . . . . . . . . .	GROUP
 STACK  . . . . . . . . . . . . .	32 Bit	 00001000 Para	  Stack	  'STACK'	 
 _DATA  . . . . . . . . . . . . .	32 Bit	 000001A3 Para	  Public  'DATA'	
-_TEXT  . . . . . . . . . . . . .	32 Bit	 00000363 Para	  Public  'CODE'	
+_TEXT  . . . . . . . . . . . . .	32 Bit	 0000030F Para	  Public  'CODE'	
 
 
 Procedures, parameters, and locals:
@@ -618,24 +723,25 @@ CreateFileA  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External
 CreateOutputFile . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 Crlf . . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 Delay  . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
-Dijkstra . . . . . . . . . . . .	P Near	 00000045 _TEXT	Length= 0000011A Public STDCALL
+Dijkstra . . . . . . . . . . . .	P Near	 00000045 _TEXT	Length= 000000ED Public STDCALL
   graph  . . . . . . . . . . . .	DWord	 bp + 00000008
   dists  . . . . . . . . . . . .	DWord	 bp + 0000000C
   conf . . . . . . . . . . . . .	DWord	 bp + 00000010
   start  . . . . . . . . . . . .	DWord	 bp + 00000014
-  x  . . . . . . . . . . . . . .	DWord	 bp - 00000004
-  j  . . . . . . . . . . . . . .	DWord	 bp - 00000008
-  zer  . . . . . . . . . . . . .	DWord	 bp - 0000000C
-  wM . . . . . . . . . . . . . .	L Near	 00000061 _TEXT	
-  f1 . . . . . . . . . . . . . .	L Near	 00000079 _TEXT	
-  less . . . . . . . . . . . . .	L Near	 000000A8 _TEXT	
-  ef1  . . . . . . . . . . . . .	L Near	 000000AB _TEXT	
-  f2 . . . . . . . . . . . . . .	L Near	 000000BF _TEXT	
-  is1  . . . . . . . . . . . . .	L Near	 0000010A _TEXT	
-  ef2  . . . . . . . . . . . . .	L Near	 0000010F _TEXT	
-  ewM  . . . . . . . . . . . . .	L Near	 00000114 _TEXT	
-  pr . . . . . . . . . . . . . .	L Near	 0000011C _TEXT	
-  epr  . . . . . . . . . . . . .	L Near	 0000015B _TEXT	
+  vis  . . . . . . . . . . . . .	Byte	 bp - 00000001
+  x  . . . . . . . . . . . . . .	DWord	 bp - 00000008
+  d  . . . . . . . . . . . . . .	DWord	 bp - 0000000C
+  wInit  . . . . . . . . . . . .	L Near	 00000051 _TEXT	
+  if0  . . . . . . . . . . . . .	L Near	 00000087 _TEXT	
+  e0 . . . . . . . . . . . . . .	L Near	 0000008E _TEXT	
+  ewInit . . . . . . . . . . . .	L Near	 00000091 _TEXT	
+  wVis . . . . . . . . . . . . .	L Near	 000000BC _TEXT	
+  brv  . . . . . . . . . . . . .	L Near	 000000DB _TEXT	
+  ewVis  . . . . . . . . . . . .	L Near	 000000DE _TEXT	
+  exp  . . . . . . . . . . . . .	L Near	 000000F0 _TEXT	
+  nd . . . . . . . . . . . . . .	L Near	 0000012A _TEXT	
+  eexp . . . . . . . . . . . . .	L Near	 0000012D _TEXT	
+  emin . . . . . . . . . . . . .	L Near	 0000012D _TEXT	
 DumpMem  . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 DumpRegs . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 ExitProcess  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
@@ -739,15 +845,13 @@ WriteStackFrame  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External
 WriteString  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteToFile  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteWindowsMsg  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
-main . . . . . . . . . . . . . .	P Near	 0000015F _TEXT	Length= 00000204 Public STDCALL
-  wN . . . . . . . . . . . . . .	L Near	 000001E1 _TEXT	
-  wD . . . . . . . . . . . . . .	L Near	 0000021D _TEXT	
-  ewD  . . . . . . . . . . . . .	L Near	 00000279 _TEXT	
-  ewN  . . . . . . . . . . . . .	L Near	 0000027F _TEXT	
-  wN2  . . . . . . . . . . . . .	L Near	 000002C4 _TEXT	
-  ewN2 . . . . . . . . . . . . .	L Near	 000002DC _TEXT	
-  nAlloc . . . . . . . . . . . .	L Near	 00000352 _TEXT	
-  en . . . . . . . . . . . . . .	L Near	 0000035C _TEXT	
+main . . . . . . . . . . . . . .	P Near	 00000132 _TEXT	Length= 000001DD Public STDCALL
+  wN . . . . . . . . . . . . . .	L Near	 000001B4 _TEXT	
+  wD . . . . . . . . . . . . . .	L Near	 000001F0 _TEXT	
+  ewD  . . . . . . . . . . . . .	L Near	 0000024C _TEXT	
+  ewN  . . . . . . . . . . . . .	L Near	 00000252 _TEXT	
+  nAlloc . . . . . . . . . . . .	L Near	 000002FE _TEXT	
+  en . . . . . . . . . . . . . .	L Near	 00000308 _TEXT	
 printf . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
 scanf  . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
 wsprintfA  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C

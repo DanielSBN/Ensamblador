@@ -113,7 +113,91 @@ INCLUDE Irvine32.inc
 		sahf
 	CompararFlotantes ENDP
 
-	Dijkstra PROC, graph: DWORD, dists: DWORD, conf: DWORD, start: DWORD
+	;----------------------------------------------------------------------------------------------------------------------------
+	Dijkstra PROC USES ecx,
+		graph: DWORD,	; Apuntador a la matriz de adyacencia
+		dists: DWORD,	; Apuntador al arreglo de distancias
+		conf: DWORD,	; Apuntador al arreglo de visitados
+		start: DWORD	; Numero del nodo incial
+	; Calcula los caminos mas cortos en un grafo desde el nodo de partida al resto de los nodos usando el algoritmo de Dijkstra
+	; Devuelve: Caminos mas cortos a cada nodo en el arreglo de distancias
+	;----------------------------------------------------------------------------------------------------------------------------
+		LOCAL vis: BYTE,	; Variable local para verificar si todos los nodos fueron explorados
+			x: DWORD,	; Variable local para obtener el nodo con la distancia mas pequena
+			d: REAL4	; Variable local para obtener la distancia mas pequena
+
+		; Para cada nodo del grafo, inicializamos las distancias iniciales
+		mov ecx, 0
+wInit:	cmp ecx, n
+		jge ewInit
+			invoke IndexarArreglo, dists, ecx, TYPE REAL4
+			mov edi, esi
+			invoke IndexarMatriz, graph, n, start, ecx, TYPE REAL4
+			
+			mov eax, [esi]
+			cmp eax, 0
+			je if0
+				push [esi]	; Si existe conexion entre el nodo inicial y el nodo actual,
+				pop [edi]	; hacemos la distancia inicial igual a la distancia de su conexion
+				jmp e0
+if0:			push 7F800000h	; Si no existe conexion entre los nodos,
+				pop [edi]		; la distancia inicial es igual a infinito
+e0:			
+			inc ecx
+			jmp wInit
+ewInit:	
+		; Inicializamos la distancia minima del nodo inicial en 0
+		invoke IndexarArreglo, dists, start, TYPE REAL4
+		push 0
+		pop [esi]
+
+		; Marcamos como visitado el nodo inicial
+		invoke IndexarArreglo, conf, start, TYPE BYTE
+		push 1
+		pop [esi]
+
+		mov vis, 1
+
+		; Iteramos para verificar si todos los nodos estan explorados
+		mov ebx, 0
+wVis:	cmp ebx, n
+		jge ewVis
+			invoke IndexarArreglo, conf, ebx, TYPE BYTE
+			mov al, [esi]
+			cmp al, 0
+			jne brv
+				mov vis, 0
+				jmp ewVis
+brv:			inc ebx
+				jmp wVis
+ewVis:
+		; Si aun no se han explorado todos los nodos, calculamos las distancias minimas para esta iteracion
+		cmp vis, 0
+		jne emin
+			mov d, 7F800000h
+
+			; Seleccionamos el vertice no-explorado con la distancia minima
+			mov ecx, 0
+exp:		cmp ecx, n
+			jge eexp
+				invoke IndexarArreglo, dists, ecx, TYPE REAL4
+				mov edi, esi
+				invoke IndexarArreglo, conf, ecx, TYPE BYTE
+				mov al, [esi]
+				cmp al, 0
+				je nd
+					invoke CompararFlotantes, [edi], d
+					jnb nd
+						push [edi]
+						pop d
+						mov x, ecx
+nd:				inc ecx
+				jmp exp
+eexp:
+			
+emin:	
+
+		COMMENT @
 		LOCAL x: REAL4, j: DWORD, zer: REAL4 ; Creamos variables locales para el procedimiento
 		
 		finit
@@ -214,7 +298,7 @@ pr:			cmp ecx, n
 				inc ecx
 				jmp pr
 epr:	
-
+		@
 		ret
 	Dijkstra ENDP
 	
@@ -242,16 +326,16 @@ epr:
 		mov siz, eax
 		
 		; Preparamos el heap para guardar los datos
-		invoke GetProcessHeap ; Obtenemos el manejador del heap actual, el cual es guardado en eax
-		cmp eax, NULL ; Si no se obtuvo correctamente el manejador,
-		je nAlloc	  ; detenemos el programa
+		invoke GetProcessHeap	; Obtenemos el manejador del heap actual, el cual es guardado en eax
+		cmp eax, NULL	; Si no se obtuvo correctamente el manejador,
+		je nAlloc		; detenemos el programa
 		mov hhm, eax
 		
 		; Inicializamos la matriz de adyacencia en el heap
-		invoke HeapAlloc, hhm, HEAP_ZERO_MEMORY, siz ; Asignamos dinamicamente la memoria para almacenar la matriz de adyacencia (retorna en
-													 ; eax un puntero al bloque de memoria), inicializando todos los valores con 0
-		cmp eax, NULL ; Si no se asigno correctamente el puntero,
-		je nAlloc	  ; detenemos el programa
+		invoke HeapAlloc, hhm, HEAP_ZERO_MEMORY, siz	; Asignamos dinamicamente la memoria para almacenar la matriz de adyacencia (retorna
+														; en eax un puntero al bloque de memoria), inicializando todos los valores con 0
+		cmp eax, NULL	; Si no se asigno correctamente el puntero,
+		je nAlloc		; detenemos el programa
 		mov grafo, eax
 		
 		; PEDIMOS LAS CONEXIONES DEL GRAFO
@@ -309,7 +393,7 @@ ewN:
 		dec eax
 		mov partida, eax
 
-		; Inicializamos el arreglo para almacenar las distancias de la misma manera que la matriz de adyacencia
+		; Inicializamos en el heap el arreglo para almacenar las distancias de la misma manera que la matriz de adyacencia
 		mov ebx, n
 		imul ebx, TYPE REAL4
 		invoke HeapAlloc, hhm, HEAP_ZERO_MEMORY, ebx
@@ -317,19 +401,7 @@ ewN:
 		je nAlloc
 		mov distancias, eax
 
-		; Inicializamos el arreglo de distancias con mas infinito
-		mov esi, distancias
-		mov ecx, 0
-wN2:		cmp ecx, n
-			jge ewN2
-			mov ebx, ecx
-			imul ebx, TYPE REAL4
-			push 7F800000h ; Representacion de mas infinito
-			pop [esi + ebx]
-			inc ecx
-			jmp wN2
-ewN2:
-		; Inicializamos un arreglo para comprobar luego en el algoritmo los nodos que ya han sido visitados
+		; Inicializamos en el heap un arreglo para comprobar luego en el algoritmo los nodos que ya han sido visitados
 		mov ebx, n
 		invoke HeapAlloc, hhm, HEAP_ZERO_MEMORY, ebx
 		cmp eax, NULL
