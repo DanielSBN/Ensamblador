@@ -1,4 +1,4 @@
-Microsoft (R) Macro Assembler Version 14.11.25547.0	    11/10/17 16:46:46
+Microsoft (R) Macro Assembler Version 14.11.25547.0	    11/10/17 18:02:06
 main.asm						     Page 1 - 1
 
 
@@ -234,6 +234,7 @@ main.asm(114) : warning A6001:no return from procedure
 							d: REAL4,		; Variable local para obtener la distancia mas pequena
 							auxC: REAL4		; Variable local para almacenar temporalmente valores reales
 						
+						
 						; Para cada nodo del grafo, inicializamos las distancias iniciales
  00000045  55		   *	    push   ebp
  00000046  8B EC	   *	    mov    ebp, esp
@@ -246,28 +247,26 @@ main.asm(114) : warning A6001:no return from procedure
  00000050  B9 00000000				mov ecx, 0
  00000055  3B 0D 0000017A R	wInit:	cmp ecx, n
 						;jge ewInit
+ 0000005B  E8 00000000 E				call DumpRegs
 							invoke IndexarArreglo, dists, ecx, TYPE REAL4
- 0000005B  6A 04	   *	    push   +000000004h
- 0000005D  51		   *	    push   ecx
- 0000005E  FF 75 10	   *	    push   dword  ptr ss:[ebp]+000000010h
- 00000061  E8 FFFFFF9A	   *	    call   IndexarArreglo
- 00000066  8B FE					mov edi, esi
+ 00000060  6A 04	   *	    push   +000000004h
+ 00000062  51		   *	    push   ecx
+ 00000063  FF 75 10	   *	    push   dword  ptr ss:[ebp]+000000010h
+ 00000066  E8 FFFFFF95	   *	    call   IndexarArreglo
+ 0000006B  8B FE					mov edi, esi
 							invoke IndexarMatriz, graph, no, start, ecx, TYPE REAL4
- 00000068  6A 04	   *	    push   +000000004h
- 0000006A  51		   *	    push   ecx
- 0000006B  FF 75 18	   *	    push   dword  ptr ss:[ebp]+000000018h
- 0000006E  FF 75 0C	   *	    push   dword  ptr ss:[ebp]+00000000Ch
- 00000071  FF 75 08	   *	    push   dword  ptr ss:[ebp]+000000008h
- 00000074  E8 FFFFFF9C	   *	    call   IndexarMatriz
-
- 00000079  C7 45 F0					mov auxC, 0
+ 0000006D  6A 04	   *	    push   +000000004h
+ 0000006F  51		   *	    push   ecx
+ 00000070  FF 75 18	   *	    push   dword  ptr ss:[ebp]+000000018h
+ 00000073  FF 75 0C	   *	    push   dword  ptr ss:[ebp]+00000000Ch
+ 00000076  FF 75 08	   *	    push   dword  ptr ss:[ebp]+000000008h
+ 00000079  E8 FFFFFF97	   *	    call   IndexarMatriz
+ 0000007E  E8 00000000 E				call DumpRegs
+ 00000083  C7 45 F0					mov auxC, 0
 	   00000000
-						
-							invoke CompararFlotantes, [esi], auxC
- 00000080  FF 75 F0	   *	    push   dword  ptr ss:[ebp]+0FFFFFFF0h
- 00000083  FF 36	   *	    push   dword  ptr [esi]
- 00000085  E8 FFFFFFAD	   *	    call   CompararFlotantes
 						COMMENT @
+							invoke CompararFlotantes, [esi], auxC
+						
 							je if0
 								push [esi]	; Si existe conexion entre el nodo inicial y el nodo actual,
 								pop [edi]	; hacemos la distancia inicial igual a la distancia de su conexion
@@ -359,10 +358,10 @@ main.asm(114) : warning A6001:no return from procedure
  0000008F  C9		   *	    leave  
  00000090  C2 0014	   *	    ret    00014h
  00000093				Dijkstra ENDP
-main.asm(226) : warning A6004:procedure argument or local not referenced : conf
-main.asm(226) : warning A6004:procedure argument or local not referenced : vis
-main.asm(226) : warning A6004:procedure argument or local not referenced : x
-main.asm(226) : warning A6004:procedure argument or local not referenced : d
+main.asm(228) : warning A6004:procedure argument or local not referenced : conf
+main.asm(228) : warning A6004:procedure argument or local not referenced : vis
+main.asm(228) : warning A6004:procedure argument or local not referenced : x
+main.asm(228) : warning A6004:procedure argument or local not referenced : d
 					
  00000093				main PROC
  00000093  9B DB E3				finit
@@ -392,7 +391,7 @@ main.asm(226) : warning A6004:procedure argument or local not referenced : d
 						invoke GetProcessHeap	; Obtenemos el manejador del heap actual, el cual es guardado en eax
  000000DC  E8 00000000 E   *	    call   GetProcessHeap
  000000E1  83 F8 00				cmp eax, NULL	; Si no se obtuvo correctamente el manejador,
- 000000E4  0F 84 0000017F			je nAlloc		; detenemos el programa
+ 000000E4  0F 84 00000182			je nAlloc		; detenemos el programa
  000000EA  A3 00000186 R			mov hhm, eax
 						
 						; Inicializamos la matriz de adyacencia en el heap
@@ -403,7 +402,7 @@ main.asm(226) : warning A6004:procedure argument or local not referenced : d
  000000FD  E8 00000000 E   *	    call   HeapAlloc
 																		; en eax un puntero al bloque de memoria), inicializando todos los valores con 0
  00000102  83 F8 00				cmp eax, NULL	; Si no se asigno correctamente el puntero,
- 00000105  0F 84 0000015E			je nAlloc		; detenemos el programa
+ 00000105  0F 84 00000161			je nAlloc		; detenemos el programa
  0000010B  A3 0000018A R			mov grafo, eax
 						
 						; PEDIMOS LAS CONEXIONES DEL GRAFO
@@ -476,7 +475,7 @@ main.asm(226) : warning A6004:procedure argument or local not referenced : d
  000001D4  FF 35 00000186 R *	    push   hhm
  000001DA  E8 00000000 E   *	    call   HeapAlloc
  000001DF  83 F8 00				cmp eax, NULL
- 000001E2  0F 84 00000081			je nAlloc
+ 000001E2  0F 84 00000084			je nAlloc
  000001E8  A3 0000018E R			mov distancias, eax
 
 						; Inicializamos en el heap un arreglo para comprobar luego en el algoritmo los nodos que ya han sido visitados
@@ -488,51 +487,47 @@ main.asm(226) : warning A6004:procedure argument or local not referenced : d
  000001F9  FF 35 00000186 R *	    push   hhm
  000001FF  E8 00000000 E   *	    call   HeapAlloc
  00000204  83 F8 00				cmp eax, NULL
- 00000207  74 60				je nAlloc
+ 00000207  74 63				je nAlloc
  00000209  A3 00000192 R			mov boo, eax
 						
 						; Llamamos al procedimiento para ejecutar el algoritmo
-						;invoke Dijkstra, grafo, n, distancias, boo, partida
-						invoke IndexarMatriz, grafo, n, 0, 1, TYPE REAL4
- 0000020E  6A 04	   *	    push   +000000004h
- 00000210  6A 01	   *	    push   +000000001h
- 00000212  6A 00	   *	    push   +000000000h
- 00000214  FF 35 0000017A R *	    push   n
- 0000021A  FF 35 0000018A R *	    push   grafo
- 00000220  E8 FFFFFDF0	   *	    call   IndexarMatriz
- 00000225  D9 06				fld REAL4 PTR [esi]
- 00000227  E8 00000000 E			call WriteFloat
- 0000022C  D9 1E				fstp REAL4 PTR [esi]
+						invoke Dijkstra, grafo, n, distancias, boo, partida
+ 0000020E  FF 35 00000196 R *	    push   partida
+ 00000214  FF 35 00000192 R *	    push   boo
+ 0000021A  FF 35 0000018E R *	    push   distancias
+ 00000220  FF 35 0000017A R *	    push   n
+ 00000226  FF 35 0000018A R *	    push   grafo
+ 0000022C  E8 FFFFFE14	   *	    call   Dijkstra
 
 						; Si el programa termina con exito, liberamos la memoria ocupada por la matriz y los arreglos
 						invoke HeapFree, hhm, 0, grafo
- 0000022E  FF 35 0000018A R *	    push   grafo
- 00000234  6A 00	   *	    push   +000000000h
- 00000236  FF 35 00000186 R *	    push   hhm
- 0000023C  E8 00000000 E   *	    call   HeapFree
+ 00000231  FF 35 0000018A R *	    push   grafo
+ 00000237  6A 00	   *	    push   +000000000h
+ 00000239  FF 35 00000186 R *	    push   hhm
+ 0000023F  E8 00000000 E   *	    call   HeapFree
 						invoke HeapFree, hhm, 0, distancias
- 00000241  FF 35 0000018E R *	    push   distancias
- 00000247  6A 00	   *	    push   +000000000h
- 00000249  FF 35 00000186 R *	    push   hhm
- 0000024F  E8 00000000 E   *	    call   HeapFree
+ 00000244  FF 35 0000018E R *	    push   distancias
+ 0000024A  6A 00	   *	    push   +000000000h
+ 0000024C  FF 35 00000186 R *	    push   hhm
+ 00000252  E8 00000000 E   *	    call   HeapFree
 						invoke HeapFree, hhm, 0, boo
- 00000254  FF 35 00000192 R *	    push   boo
- 0000025A  6A 00	   *	    push   +000000000h
- 0000025C  FF 35 00000186 R *	    push   hhm
- 00000262  E8 00000000 E   *	    call   HeapFree
- 00000267  EB 0A				jmp en
+ 00000257  FF 35 00000192 R *	    push   boo
+ 0000025D  6A 00	   *	    push   +000000000h
+ 0000025F  FF 35 00000186 R *	    push   hhm
+ 00000265  E8 00000000 E   *	    call   HeapFree
+ 0000026A  EB 0A				jmp en
 						
 						; En caso de que la asignacion de memoria fallase, le informamos al usuario
- 00000269  BA 00000147 R	nAlloc:	mov edx, OFFSET fail
- 0000026E  E8 00000000 E			call WriteString
+ 0000026C  BA 00000147 R	nAlloc:	mov edx, OFFSET fail
+ 00000271  E8 00000000 E			call WriteString
 						
- 00000273			en:		
+ 00000276  E8 00000000 E	en:		call ReadDec
 						exit
- 00000273  6A 00	   *	    push   +000000000h
- 00000275  E8 00000000 E   *	    call   ExitProcess
- 0000027A				main ENDP
+ 0000027B  6A 00	   *	    push   +000000000h
+ 0000027D  E8 00000000 E   *	    call   ExitProcess
+ 00000282				main ENDP
 					END main
-Microsoft (R) Macro Assembler Version 14.11.25547.0	    11/10/17 16:46:46
+Microsoft (R) Macro Assembler Version 14.11.25547.0	    11/10/17 18:02:06
 main.asm						     Symbols 2 - 1
 
 
@@ -627,7 +622,7 @@ Segments and Groups:
 FLAT . . . . . . . . . . . . . .	GROUP
 STACK  . . . . . . . . . . . . .	32 Bit	 00001000 Para	  Stack	  'STACK'	 
 _DATA  . . . . . . . . . . . . .	32 Bit	 000001A3 Para	  Public  'DATA'	
-_TEXT  . . . . . . . . . . . . .	32 Bit	 0000027A Para	  Public  'CODE'	
+_TEXT  . . . . . . . . . . . . .	32 Bit	 00000282 Para	  Public  'CODE'	
 
 
 Procedures, parameters, and locals:
@@ -758,13 +753,13 @@ WriteStackFrame  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External
 WriteString  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteToFile  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteWindowsMsg  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
-main . . . . . . . . . . . . . .	P Near	 00000093 _TEXT	Length= 000001E7 Public STDCALL
+main . . . . . . . . . . . . . .	P Near	 00000093 _TEXT	Length= 000001EF Public STDCALL
   wN . . . . . . . . . . . . . .	L Near	 00000115 _TEXT	
   wD . . . . . . . . . . . . . .	L Near	 00000151 _TEXT	
   ewD  . . . . . . . . . . . . .	L Near	 000001AD _TEXT	
   ewN  . . . . . . . . . . . . .	L Near	 000001B3 _TEXT	
-  nAlloc . . . . . . . . . . . .	L Near	 00000269 _TEXT	
-  en . . . . . . . . . . . . . .	L Near	 00000273 _TEXT	
+  nAlloc . . . . . . . . . . . .	L Near	 0000026C _TEXT	
+  en . . . . . . . . . . . . . .	L Near	 00000276 _TEXT	
 printf . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
 scanf  . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
 wsprintfA  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
