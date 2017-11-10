@@ -114,8 +114,9 @@ INCLUDE Irvine32.inc
 	CompararFlotantes ENDP
 
 	;----------------------------------------------------------------------------------------------------------------------------
-	Dijkstra PROC USES ecx,
+	Dijkstra PROC USES eax ebx ecx esi edi,
 		graph: DWORD,	; Apuntador a la matriz de adyacencia
+		no: DWORD,		; Numero de nodos
 		dists: DWORD,	; Apuntador al arreglo de distancias
 		conf: DWORD,	; Apuntador al arreglo de visitados
 		start: DWORD	; Numero del nodo incial
@@ -123,8 +124,9 @@ INCLUDE Irvine32.inc
 	; Devuelve: Caminos mas cortos a cada nodo en el arreglo de distancias
 	;----------------------------------------------------------------------------------------------------------------------------
 		LOCAL vis: BYTE,	; Variable local para verificar si todos los nodos fueron explorados
-			x: DWORD,	; Variable local para obtener el nodo con la distancia mas pequena
-			d: REAL4	; Variable local para obtener la distancia mas pequena
+			x: DWORD,		; Variable local para obtener el nodo con la distancia mas pequena
+			d: REAL4,		; Variable local para obtener la distancia mas pequena
+			auxC: REAL4		; Variable local para almacenar temporalmente valores reales
 
 		; Para cada nodo del grafo, inicializamos las distancias iniciales
 		mov ecx, 0
@@ -132,10 +134,10 @@ wInit:	cmp ecx, n
 		jge ewInit
 			invoke IndexarArreglo, dists, ecx, TYPE REAL4
 			mov edi, esi
-			invoke IndexarMatriz, graph, n, start, ecx, TYPE REAL4
-			
-			mov eax, [esi]
-			cmp eax, 0
+			invoke IndexarMatriz, graph, no, start, ecx, TYPE REAL4
+
+			mov auxC, 0
+			invoke CompararFlotantes, REAL4 PTR [esi], auxC
 			je if0
 				push [esi]	; Si existe conexion entre el nodo inicial y el nodo actual,
 				pop [edi]	; hacemos la distancia inicial igual a la distancia de su conexion
@@ -150,14 +152,14 @@ ewInit:
 		invoke IndexarArreglo, dists, start, TYPE REAL4
 		push 0
 		pop [esi]
-
+		
 		; Marcamos como visitado el nodo inicial
 		invoke IndexarArreglo, conf, start, TYPE BYTE
 		push 1
 		pop [esi]
 
-		mov vis, 1
-
+wMin:	mov vis, 1
+		
 		; Iteramos para verificar si todos los nodos estan explorados
 		mov ebx, 0
 wVis:	cmp ebx, n
@@ -170,13 +172,13 @@ wVis:	cmp ebx, n
 				jmp ewVis
 brv:			inc ebx
 				jmp wVis
-ewVis:
+ewVis: 
 		; Si aun no se han explorado todos los nodos, calculamos las distancias minimas para esta iteracion
 		cmp vis, 0
 		jne emin
 			mov d, 7F800000h
-
-			; Seleccionamos el vertice no-explorado con la distancia minima
+			
+			; Seleccionamos el nodo no-explorado con la distancia minima
 			mov ecx, 0
 exp:		cmp ecx, n
 			jge eexp
@@ -185,8 +187,8 @@ exp:		cmp ecx, n
 				invoke IndexarArreglo, conf, ecx, TYPE BYTE
 				mov al, [esi]
 				cmp al, 0
-				je nd
-					invoke CompararFlotantes, [edi], d
+				jne nd
+					invoke CompararFlotantes, REAL4 PTR [edi], d
 					jnb nd
 						push [edi]
 						pop d
@@ -194,111 +196,30 @@ exp:		cmp ecx, n
 nd:				inc ecx
 				jmp exp
 eexp:
-			
-emin:	
-
-		COMMENT @
-		LOCAL x: REAL4, j: DWORD, zer: REAL4 ; Creamos variables locales para el procedimiento
-		
-		finit
-		
-		; Inicializamos la distancia del nodo de partida en 0
-		mov esi, dists
-		mov eax, start
-		imul eax, TYPE REAL4
-		push 0
-		pop [esi + eax]
-		
-		; Iteramos para obtener las distancias minimas
-		mov ebx, 0
-wM:			cmp ebx, n
-			jge ewM
-			
-			; Seleccionamos el menor nodo
-			mov x, 7F800000h
-			mov ecx, 0
-f1:				cmp ecx, n
-				jge ef1
-				mov edi, dists
-				mov edx, ecx
-				imul edx, TYPE REAL4
-				fld REAL4 PTR [edi + edx]
-				fcomp x
-				fnstsw ax
-				sahf
-				jnb less
-					mov esi, conf
-					mov eax, [esi + edx]
-					cmp eax, 0
-					jne less
-						mov j, ecx
-						push [edi + edx]
-						pop x
-less:			inc ecx
-				jmp f1
-ef1:		mov esi, conf
-			mov edx, j
-			imul edx, TYPE REAL4
+			; Marcamos el nodo obtenido como explorado
+			invoke IndexarArreglo, conf, x, TYPE BYTE
 			push 1
-			pop [esi + edx]
-			inc ebx
+			pop [esi]
 			
+			; Iteramos a traves de las conexiones del nodo
 			mov ecx, 0
-f2:				cmp ecx, n
-				jge ef2
-				mov esi, graph
-				mov edx, j
-				imul edx, n
-				imul edx, TYPE REAL4
-				add esi, edx
-				mov edx, ecx
-				imul edx, TYPE REAL4
-				add esi, edx
-
-				mov zer, 0
+wfD:		cmp ecx, n
+			jge ewfD
+				invoke IndexarMatriz, graph, no, x, ecx, TYPE REAL4
 				fld REAL4 PTR [esi]
-				fcom zer
-				je is1
-					mov edi, dists
-					mov edx, j
-					imul edx, TYPE REAL4
-					fadd REAL4 PTR [edi + edx]
-					mov edx, ecx
-					imul edx, TYPE REAL4
-					fcom REAL4 PTR [edi + edx]
-					fnstsw ax
-					sahf
-					jnb is1
-						fst REAL4 PTR [edi + edx]
-is1:			fstp REAL4 PTR[esi]
-				inc ecx
-				jmp f2
-ef2:		jmp wM		
-ewM:		
-		mov esi, dists
-		mov ecx, 0
-pr:			cmp ecx, n
-			jge epr
-				mov edx, OFFSET res
-				call WriteString
-				mov eax, ecx
-				inc eax
-				call WriteDec
-				mov edx, OFFSET p
-				call WriteString
-				
-				mov esi, dists
-				mov edx, ecx
-				imul edx, TYPE REAL4
-				fld REAL4 PTR [esi + edx]
-				call WriteFloat
-				call Crlf
-				fstp REAL4 PTR [esi + edx]
-				
-				inc ecx
-				jmp pr
-epr:	
-		@
+				invoke IndexarArreglo, dists, x, TYPE REAL4
+				fadd REAL4 PTR [esi]
+				fstp auxC
+				invoke IndexarArreglo, dists, ecx, TYPE REAL4
+				invoke CompararFlotantes, auxC, REAL4 PTR [esi]
+				jnb men
+					push auxC
+					pop [esi]
+men:			inc ecx
+				jmp wfD
+ewfD:
+			jmp wMin
+emin:	
 		ret
 	Dijkstra ENDP
 	
@@ -403,13 +324,14 @@ ewN:
 
 		; Inicializamos en el heap un arreglo para comprobar luego en el algoritmo los nodos que ya han sido visitados
 		mov ebx, n
+		imul ebx, TYPE BYTE
 		invoke HeapAlloc, hhm, HEAP_ZERO_MEMORY, ebx
 		cmp eax, NULL
 		je nAlloc
 		mov boo, eax
 		
 		; Llamamos al procedimiento para ejecutar el algoritmo
-		invoke Dijkstra, grafo, distancias, boo, partida
+		invoke Dijkstra, grafo, n, distancias, boo, partida
 
 		; Si el programa termina con exito, liberamos la memoria ocupada por la matriz y los arreglos
 		invoke HeapFree, hhm, 0, grafo
@@ -421,7 +343,7 @@ ewN:
 nAlloc:	mov edx, OFFSET fail
 		call WriteString
 		
-en:		
+en:		call ReadDec
 		exit
 	main ENDP
 	END main
