@@ -127,17 +127,19 @@ INCLUDE Irvine32.inc
 			x: DWORD,		; Variable local para obtener el nodo con la distancia mas pequena
 			d: REAL4,		; Variable local para obtener la distancia mas pequena
 			auxC: REAL4		; Variable local para almacenar temporalmente valores reales
-
+		
 		; Para cada nodo del grafo, inicializamos las distancias iniciales
 		mov ecx, 0
 wInit:	cmp ecx, n
-		jge ewInit
+		;jge ewInit
 			invoke IndexarArreglo, dists, ecx, TYPE REAL4
 			mov edi, esi
 			invoke IndexarMatriz, graph, no, start, ecx, TYPE REAL4
 
 			mov auxC, 0
-			invoke CompararFlotantes, REAL4 PTR [esi], auxC
+		
+			invoke CompararFlotantes, [esi], auxC
+		COMMENT @
 			je if0
 				push [esi]	; Si existe conexion entre el nodo inicial y el nodo actual,
 				pop [edi]	; hacemos la distancia inicial igual a la distancia de su conexion
@@ -147,7 +149,7 @@ if0:			push 7F800000h	; Si no existe conexion entre los nodos,
 e0:			
 			inc ecx
 			jmp wInit
-ewInit:	
+ewInit: 
 		; Inicializamos la distancia minima del nodo inicial en 0
 		invoke IndexarArreglo, dists, start, TYPE REAL4
 		push 0
@@ -219,7 +221,7 @@ men:			inc ecx
 				jmp wfD
 ewfD:
 			jmp wMin
-emin:	
+emin:	@
 		ret
 	Dijkstra ENDP
 	
@@ -343,7 +345,7 @@ ewN:
 nAlloc:	mov edx, OFFSET fail
 		call WriteString
 		
-en:		call ReadDec
+en:		
 		exit
 	main ENDP
 	END main

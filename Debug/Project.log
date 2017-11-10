@@ -1,3 +1,7 @@
 ﻿  Assembling main.asm...
 main.asm(114): warning A6001: no return from procedure
+main.asm(226): warning A6004: procedure argument or local not referenced : conf
+main.asm(226): warning A6004: procedure argument or local not referenced : vis
+main.asm(226): warning A6004: procedure argument or local not referenced : x
+main.asm(226): warning A6004: procedure argument or local not referenced : d
   Project.vcxproj -> D:\DANIEL\Documents\GitHub\Ensamblador\Debug\Project.exe
