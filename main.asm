@@ -212,7 +212,7 @@ ewN:
 		je nAlloc
 		mov distancias, eax
 
-		; Inicializamos en el heap un arreglo para comprobar luego en el algoritmo los nodos que ya han sido visitados
+		; Inicializamos en el heap un arreglo para comprobar en el algoritmo los nodos que ya han sido visitados
 		mov ebx, n
 		imul ebx, TYPE BYTE
 		invoke HeapAlloc, hhm, HEAP_ZERO_MEMORY, ebx
@@ -220,9 +220,6 @@ ewN:
 		je nAlloc
 		mov boo, eax
 		
-		; Llamamos al procedimiento para ejecutar el algoritmo
-		;invoke Dijkstra, grafo, n, distancias, boo, partida
-
 		; Para cada nodo del grafo, inicializamos las distancias iniciales
 		mov ecx, 0
 wInit:	cmp ecx, n
@@ -235,7 +232,7 @@ wInit:	cmp ecx, n
 			fcomp epsilon
 			fnstsw ax
 			sahf
-			jna el0
+			jna if0
 				fld REAL4 PTR [esi]		; Si existe conexion entre el nodo inicial y el nodo actual,
 				fstp REAL4 PTR [edi]	; hacemos la distancia inicial del nodo actual igual a la distancia de dicha conexion
 				jmp el0
@@ -313,21 +310,17 @@ wfD:		cmp ecx, n
 				fcomp epsilon
 				fnstsw ax
 				sahf
-				jnb is0
-					fld epsilon
+				jna is0
 					fld REAL4 PTR [esi]
 					invoke IndexarArreglo, distancias, x, TYPE REAL4
 					fadd REAL4 PTR [esi]
-					fst auxF
 					invoke IndexarArreglo, distancias, ecx, TYPE REAL4
-					fsub REAL4 PTR [esi]
-					fabs
-					fcomi st(0), st(1)
+					fcom REAL4 PTR [esi]
+					fnstsw ax
+					sahf
 					jnb is0
-						fld auxF				; Si la distancia del nodo minimo sumada con la distancia de su conexion con el nodo actual
-						fstp REAL4 PTR [esi]	; es menor que la distancia del nodo actual, hacemos el ultimo valor igual al primero
-						fstp auxF
-						fstp auxF
+						fstp REAL4 PTR [esi]	; Si la distancia del nodo minimo sumada con la distancia de su conexion con el nodo actual
+												; es menor que la distancia del nodo actual, hacemos el ultimo valor igual al primero
 is0:				
 				inc ecx
 				jmp wfD
