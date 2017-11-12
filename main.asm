@@ -6,6 +6,9 @@
 INCLUDE Irvine32.inc
 
 .DATA
+	; Valores para comparar con 0
+	epsilon REAL4 1.0E-12
+	
 	; Mensaje de bienvenida para el programa
 	bienvenida BYTE "BIENVENIDO USUARIO", 0dh, 0ah,
 					"Este programa calcula el camino mas corto en un grafo desde el nodo de partida hasta todos los demas nodos.", 0
@@ -24,6 +27,11 @@ INCLUDE Irvine32.inc
 
 	; Mensaje para informar que la asignacion de memoria fallo
 	fail BYTE "Error: La asignacion de memoria fallo.", 0
+
+	; Mensajes para imprimir la tabla de distancias
+	resul BYTE "DISTANCIAS MINIMAS", 0
+	node BYTE "Nodo ", 0
+	infin BYTE "inf", 0
 
 	; Variables auxiliares para guardar datos temporalmente
 	aux1 DWORD ?
@@ -57,6 +65,13 @@ INCLUDE Irvine32.inc
 	; Mensaje para la entrega de resultados
 	res BYTE "Nodo ", 0
 	p BYTE ":", 9h, 0
+
+	; Variable para verificar si todos los nodos fueron explorados
+	vis BYTE ?
+
+	; Variables para obtener el nodo con la distancia mas pequena
+	d REAL4 ?
+	x DWORD ?
 
 .CODE
 	;------------------------------------------------------------------------------------------
@@ -99,133 +114,6 @@ INCLUDE Irvine32.inc
 		
 		ret
 	IndexarMatriz ENDP
-	
-	;------------------------------------------------------------------------------------------
-	CompararFlotantes PROC USES ax,
-		fc1: REAL4,		; Valor del lado izquierdo de la comparacion
-		fc2: REAL4		; Valor del lado derecho de la comparacion
-	; Compara dos valores de punto flotante y refleja el resultado en el registro de banderas
-	; Devuelve: Resultado de la comparacion en eflags
-	;------------------------------------------------------------------------------------------
-		fld fc1
-		fcomp fc2
-		fnstsw ax
-		sahf
-	CompararFlotantes ENDP
-
-	;----------------------------------------------------------------------------------------------------------------------------
-	Dijkstra PROC USES eax ebx ecx esi edi,
-		graph: DWORD,	; Apuntador a la matriz de adyacencia
-		no: DWORD,		; Numero de nodos
-		dists: DWORD,	; Apuntador al arreglo de distancias
-		conf: DWORD,	; Apuntador al arreglo de visitados
-		start: DWORD	; Numero del nodo incial
-	; Calcula los caminos mas cortos en un grafo desde el nodo de partida al resto de los nodos usando el algoritmo de Dijkstra
-	; Devuelve: Caminos mas cortos a cada nodo en el arreglo de distancias
-	;----------------------------------------------------------------------------------------------------------------------------
-		LOCAL vis: BYTE,	; Variable local para verificar si todos los nodos fueron explorados
-			x: DWORD,		; Variable local para obtener el nodo con la distancia mas pequena
-			d: REAL4,		; Variable local para obtener la distancia mas pequena
-			auxC: REAL4		; Variable local para almacenar temporalmente valores reales
-		
-		
-		; Para cada nodo del grafo, inicializamos las distancias iniciales
-		mov ecx, 0
-wInit:	cmp ecx, n
-		;jge ewInit
-			call DumpRegs
-			invoke IndexarArreglo, dists, ecx, TYPE REAL4
-			mov edi, esi
-			invoke IndexarMatriz, graph, no, start, ecx, TYPE REAL4
-			call DumpRegs
-			mov auxC, 0
-		COMMENT @
-			invoke CompararFlotantes, [esi], auxC
-		
-			je if0
-				push [esi]	; Si existe conexion entre el nodo inicial y el nodo actual,
-				pop [edi]	; hacemos la distancia inicial igual a la distancia de su conexion
-				jmp e0
-if0:			push 7F800000h	; Si no existe conexion entre los nodos,
-				pop [edi]		; la distancia inicial es igual a infinito
-e0:			
-			inc ecx
-			jmp wInit
-ewInit: 
-		; Inicializamos la distancia minima del nodo inicial en 0
-		invoke IndexarArreglo, dists, start, TYPE REAL4
-		push 0
-		pop [esi]
-		
-		; Marcamos como visitado el nodo inicial
-		invoke IndexarArreglo, conf, start, TYPE BYTE
-		push 1
-		pop [esi]
-
-wMin:	mov vis, 1
-		
-		; Iteramos para verificar si todos los nodos estan explorados
-		mov ebx, 0
-wVis:	cmp ebx, n
-		jge ewVis
-			invoke IndexarArreglo, conf, ebx, TYPE BYTE
-			mov al, [esi]
-			cmp al, 0
-			jne brv
-				mov vis, 0
-				jmp ewVis
-brv:			inc ebx
-				jmp wVis
-ewVis: 
-		; Si aun no se han explorado todos los nodos, calculamos las distancias minimas para esta iteracion
-		cmp vis, 0
-		jne emin
-			mov d, 7F800000h
-			
-			; Seleccionamos el nodo no-explorado con la distancia minima
-			mov ecx, 0
-exp:		cmp ecx, n
-			jge eexp
-				invoke IndexarArreglo, dists, ecx, TYPE REAL4
-				mov edi, esi
-				invoke IndexarArreglo, conf, ecx, TYPE BYTE
-				mov al, [esi]
-				cmp al, 0
-				jne nd
-					invoke CompararFlotantes, REAL4 PTR [edi], d
-					jnb nd
-						push [edi]
-						pop d
-						mov x, ecx
-nd:				inc ecx
-				jmp exp
-eexp:
-			; Marcamos el nodo obtenido como explorado
-			invoke IndexarArreglo, conf, x, TYPE BYTE
-			push 1
-			pop [esi]
-			
-			; Iteramos a traves de las conexiones del nodo
-			mov ecx, 0
-wfD:		cmp ecx, n
-			jge ewfD
-				invoke IndexarMatriz, graph, no, x, ecx, TYPE REAL4
-				fld REAL4 PTR [esi]
-				invoke IndexarArreglo, dists, x, TYPE REAL4
-				fadd REAL4 PTR [esi]
-				fstp auxC
-				invoke IndexarArreglo, dists, ecx, TYPE REAL4
-				invoke CompararFlotantes, auxC, REAL4 PTR [esi]
-				jnb men
-					push auxC
-					pop [esi]
-men:			inc ecx
-				jmp wfD
-ewfD:
-			jmp wMin
-emin:	@
-		ret
-	Dijkstra ENDP
 	
 	main PROC
 		finit
@@ -301,9 +189,7 @@ wD:				cmp ecx, aux1
 				
 				; Calculamos la coordenada de la conexion en la matriz de adyacencia y la introducimos
 				invoke IndexarMatriz, grafo, n, ebx, aux2, TYPE REAL4
-				fstp auxF
-				push auxF
-				pop [esi]
+				fstp REAL4 PTR [esi]
 				
 				inc ecx
 				jmp wD
@@ -335,7 +221,159 @@ ewN:
 		mov boo, eax
 		
 		; Llamamos al procedimiento para ejecutar el algoritmo
-		invoke Dijkstra, grafo, n, distancias, boo, partida
+		;invoke Dijkstra, grafo, n, distancias, boo, partida
+
+		; Para cada nodo del grafo, inicializamos las distancias iniciales
+		mov ecx, 0
+wInit:	cmp ecx, n
+		jge ewInit
+			invoke IndexarArreglo, distancias, ecx, TYPE REAL4
+			mov edi, esi
+			invoke IndexarMatriz, grafo, n, partida, ecx, TYPE REAL4
+
+			fld REAL4 PTR [esi]
+			fcomp epsilon
+			fnstsw ax
+			sahf
+			jna el0
+				fld REAL4 PTR [esi]		; Si existe conexion entre el nodo inicial y el nodo actual,
+				fstp REAL4 PTR [edi]	; hacemos la distancia inicial del nodo actual igual a la distancia de dicha conexion
+				jmp el0
+if0:			push 7F800000h			; Si no existe conexion entre los nodos,
+				pop REAL4 PTR [edi]		; la distancia inicial es igual a infinito
+el0:		
+			inc ecx
+			jmp wInit
+ewInit:	
+		; Inicializamos la distancia minima del nodo inicial en 0
+		invoke IndexarArreglo, distancias, partida, TYPE REAL4
+		mov aux1, 0
+		fild aux1
+		fstp REAL4 PTR [esi]
+
+		; Marcamos como visitado el nodo inicial
+		invoke IndexarArreglo, boo, partida, TYPE BYTE
+		push 1
+		pop [esi]
+
+wMin:	mov vis, 1
+
+		; Iteramos para verificar si todos los nodos estan explorados
+		mov ebx, 0
+wVis:	cmp ebx, n
+		jge ewVis
+			invoke IndexarArreglo, boo, ebx, TYPE BYTE
+			mov al, BYTE PTR [esi]
+			cmp al, 0
+			jnz brv
+				mov vis, 0
+				jmp ewVis
+
+brv:			inc ebx
+				jmp wVis
+ewVis:
+		; Si aun no se han explorado todos los nodos, calculamos las distancias minimas para esta iteracion
+		cmp vis, 0
+		jnz emin
+			mov d, 7F800000h
+
+			; Seleccionamos el nodo no-explorado con la distancia minima (lo denominamos nodo minimo)
+			mov ecx, 0
+exp:		cmp ecx, n
+			jge eexp
+				invoke IndexarArreglo, distancias, ecx, TYPE REAL4
+				mov edi, esi
+				invoke IndexarArreglo, boo, ecx, TYPE BYTE
+				mov al, BYTE PTR [esi]
+				cmp al, 0
+				jnz nd
+					fld REAL4 PTR [edi]
+					fcomp d
+					fnstsw ax
+					sahf
+					jnb nd
+						fld REAL4 PTR [edi]
+						fstp d
+						mov x, ecx
+
+nd:					inc ecx
+					jmp exp
+eexp:
+			; Marcamos el nodo obtenido como explorado
+			invoke IndexarArreglo, boo, x, TYPE BYTE
+			push 1
+			pop [esi]
+			
+			; Iteramos a traves de las conexiones del nodo
+			mov ecx, 0
+wfD:		cmp ecx, n
+			jge ewfD
+				invoke IndexarMatriz, grafo, n, x, ecx, TYPE REAL4
+				fld REAL4 PTR [esi]
+				fcomp epsilon
+				fnstsw ax
+				sahf
+				jnb is0
+					fld epsilon
+					fld REAL4 PTR [esi]
+					invoke IndexarArreglo, distancias, x, TYPE REAL4
+					fadd REAL4 PTR [esi]
+					fst auxF
+					invoke IndexarArreglo, distancias, ecx, TYPE REAL4
+					fsub REAL4 PTR [esi]
+					fabs
+					fcomi st(0), st(1)
+					jnb is0
+						fld auxF				; Si la distancia del nodo minimo sumada con la distancia de su conexion con el nodo actual
+						fstp REAL4 PTR [esi]	; es menor que la distancia del nodo actual, hacemos el ultimo valor igual al primero
+						fstp auxF
+						fstp auxF
+is0:				
+				inc ecx
+				jmp wfD
+ewfD:
+			jmp wMin
+emin:
+		; Iteramos a traves del arreglo de distancias e imprimimos cada una
+		call Crlf
+		mov edx, OFFSET resul
+		call WriteString
+		call Crlf
+
+		mov ecx, 0
+wpr:	cmp ecx, n
+		jge ewpr
+			mov edx, OFFSET node
+			call WriteString
+			mov eax, ecx
+			inc eax
+			call WriteDec
+			mov al, ':'
+			call WriteChar
+			mov al, 9h
+			call WriteChar
+			call WriteChar
+
+			invoke IndexarArreglo, distancias, ecx, TYPE REAL4
+			fld REAL4 PTR[esi]
+			fcom epsilon
+			fnstsw ax
+			sahf
+			jnb inf
+				cmp ecx, partida
+				je inf
+					mov edx, OFFSET infin
+					call WriteString
+					call Crlf
+					jmp ninf
+inf:			call WriteFloat
+				fstp auxF
+				call Crlf
+ninf:
+			inc ecx
+			jmp wpr
+ewpr:
+		call Crlf
 
 		; Si el programa termina con exito, liberamos la memoria ocupada por la matriz y los arreglos
 		invoke HeapFree, hhm, 0, grafo
@@ -347,7 +385,7 @@ ewN:
 nAlloc:	mov edx, OFFSET fail
 		call WriteString
 		
-en:		call ReadDec
+en:		
 		exit
 	main ENDP
 	END main
