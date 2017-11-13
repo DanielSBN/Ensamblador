@@ -10,17 +10,21 @@ INCLUDE Irvine32.inc
 	epsilon REAL4 1.0E-12
 	
 	; Mensaje de bienvenida para el programa
-	bienvenida BYTE "BIENVENIDO USUARIO", 0dh, 0ah,
+	bienvenida BYTE "BIENVENIDO USUARIO", 0Dh, 0Ah,
 					"Este programa calcula el camino mas corto en un grafo desde el nodo de partida hasta todos los demas nodos.", 0
 
 	; Mensaje para pedir la cantidad de nodos
 	nodos BYTE "Ingrese la cantidad de nodos del grafo: ", 0
+	negn BYTE "Error: La cantidad de nodos no puede ser nula o negativa. Por favor introduzca de nuevo el dato.", 0
 
 	; Mensajes para pedir las conexiones en el grafo
 	con1 BYTE "Ingrese la cantidad de conexiones del nodo ", 0
 	con2 BYTE ": ", 0
 	con3 BYTE "Ingrese el nodo con el que esta conectado: ", 0
 	con4 BYTE "Ingrese la distancia de la conexion: ", 0
+	con5 BYTE "Error: Las distancias deben ser positivas. Por favor introduzca de nuevo el dato.", 0
+	con6 BYTE "Error: La cantidad de conexiones debe ser no-negativa. Por favor introduzca de nuevo el dato.", 0
+	con7 BYTE "Error: El nodo conectado debe estar en un rango desde 1 hasta la cantidad total de nodos. Por favor introduzca de nuevo el dato.", 0
 
 	; Mensaje para pedir el nodo inicial
 	ini BYTE "Ingrese el nodo de partida: ", 0
@@ -29,7 +33,8 @@ INCLUDE Irvine32.inc
 	fail BYTE "Error: La asignacion de memoria fallo.", 0
 
 	; Mensajes para imprimir la tabla de distancias
-	resul BYTE "DISTANCIAS MINIMAS", 0
+	resul BYTE "DISTANCIAS MINIMAS", 0Dh, 0Ah,
+			   "Nota: Una distancia de 'inf' indica que no se puede llegar a ese nodo desde el nodo de partida", 0Dh, 0Ah, 0
 	node BYTE "Nodo ", 0
 	infin BYTE "inf", 0
 
@@ -125,11 +130,17 @@ INCLUDE Irvine32.inc
 		call Crlf
 
 		; Pedimos la cantidad de nodos del grafo
-		mov edx, OFFSET nodos
+nn:		mov edx, OFFSET nodos
 		call WriteString
-		call ReadDec
+		call ReadInt
 		call Crlf
-		mov n, eax
+		cmp eax, 0
+		jg gn
+			mov edx, OFFSET negn
+			call WriteString	; Si la cantidad ingresada es negativa o nula,
+			call Crlf			; la volvemos a pedir
+			jmp nn
+gn:		mov n, eax
 		
 		; Inicializamos las variables dim y siz
 		mov eax, n
@@ -158,16 +169,22 @@ INCLUDE Irvine32.inc
 wN:			cmp ebx, n
 			jge ewN
 			
-			mov edx, OFFSET con1
+nc:			mov edx, OFFSET con1
 			call WriteString
 			mov eax, ebx
 			inc eax
 			call WriteDec
 			mov edx, OFFSET con2
 			call WriteString
-			call ReadDec
+			call ReadInt
 			call Crlf
-			mov aux1, eax
+			cmp eax, 0
+			jge gc
+				mov edx, OFFSET con6
+				call WriteString	; Si la cantidad de conexiones ingresada es negativa,
+				call Crlf			; la volvemos a pedir
+				jmp nc
+gc:			mov aux1, eax
 			
 			; Ciclo interno, para pedir las distancias de las conexiones de cada nodo
 			mov ecx, 0
@@ -175,23 +192,44 @@ wD:				cmp ecx, aux1
 				jge ewD
 				
 				; Pedimos el nodo con el cual esta conectado el nodo actual
-				mov edx, OFFSET con3
+an:				mov edx, OFFSET con3
 				call WriteString
-				call ReadDec
-				dec eax
-				mov aux2, eax
-				
+				call ReadInt
+				cmp eax, 0
+				jle gnn
+					cmp eax, n
+					jg gnn
+						dec eax
+						mov aux2, eax
+						jmp ann
+gnn:					mov edx, OFFSET con7
+						call WriteString	; Si el nodo conectado no esta dentro del rango permitido,
+						call Crlf			; lo volvemos a pedir
+						jmp an
+ann:			
 				; Pedimos la distancia de la conexion actual
-				mov edx, OFFSET con4
+npos:			mov edx, OFFSET con4
 				call WriteString
 				call ReadFloat
 				call Crlf
 				
+				; Revisamos que la distancia sea positiva (ya que el algoritmo de Dijkstra no funciona con distancias negativas)
+				fcom epsilon
+				fnstsw ax
+				sahf
+				jnb pos
+					mov edx, OFFSET con5
+					call WriteString
+					call Crlf
+					jmp npos	; En caso de que la distancia introducida sea negativa o nula, la pedimos de nuevo
+pos:			
 				; Calculamos la coordenada de la conexion en la matriz de adyacencia y la introducimos
-				invoke IndexarMatriz, grafo, n, ebx, aux2, TYPE REAL4
-				fstp REAL4 PTR [esi]
+				cmp aux2, ebx
+				je equa		; Si el nodo con el que esta conectado es el mismo, ignoramos la distancia introducida
+					invoke IndexarMatriz, grafo, n, ebx, aux2, TYPE REAL4
+					fstp REAL4 PTR [esi]
 				
-				inc ecx
+equa:			inc ecx
 				jmp wD
 ewD:		
 			inc ebx
@@ -263,8 +301,8 @@ wVis:	cmp ebx, n
 			mov al, BYTE PTR [esi]
 			cmp al, 0
 			jnz brv
-				mov vis, 0
-				jmp ewVis
+				mov vis, 0	; El momento en el que encontremos un nodo no-explorado,
+				jmp ewVis	; detenemos el ciclo
 
 brv:			inc ebx
 				jmp wVis
@@ -288,9 +326,9 @@ exp:		cmp ecx, n
 					fcomp d
 					fnstsw ax
 					sahf
-					jnb nd
-						fld REAL4 PTR [edi]
-						fstp d
+					jnbe nd
+						fld REAL4 PTR [edi]		; Si el nodo no esta explorado y su distancia es menor que la distancia minima encontrada
+						fstp d					; hasta el momento, designamos este como el nodo minimo
 						mov x, ecx
 
 nd:					inc ecx
@@ -314,13 +352,14 @@ wfD:		cmp ecx, n
 					fld REAL4 PTR [esi]
 					invoke IndexarArreglo, distancias, x, TYPE REAL4
 					fadd REAL4 PTR [esi]
+					fst auxF
 					invoke IndexarArreglo, distancias, ecx, TYPE REAL4
-					fcom REAL4 PTR [esi]
+					fcomp REAL4 PTR [esi]
 					fnstsw ax
 					sahf
 					jnb is0
-						fstp REAL4 PTR [esi]	; Si la distancia del nodo minimo sumada con la distancia de su conexion con el nodo actual
-												; es menor que la distancia del nodo actual, hacemos el ultimo valor igual al primero
+						fld auxF				; Si la distancia del nodo minimo sumada con la distancia de su conexion con el nodo actual
+						fstp REAL4 PTR [esi]	; es menor que la distancia del nodo actual, hacemos el ultimo valor igual al primero
 is0:				
 				inc ecx
 				jmp wfD
@@ -336,6 +375,7 @@ emin:
 		mov ecx, 0
 wpr:	cmp ecx, n
 		jge ewpr
+			; Imprimimos el nodo al cual pertenece la distancia
 			mov edx, OFFSET node
 			call WriteString
 			mov eax, ecx
@@ -347,20 +387,20 @@ wpr:	cmp ecx, n
 			call WriteChar
 			call WriteChar
 
+			; Imprimimos la distancia como tal
+			mov auxF, 7F800000h
 			invoke IndexarArreglo, distancias, ecx, TYPE REAL4
 			fld REAL4 PTR[esi]
-			fcom epsilon
+			fcom auxF
 			fnstsw ax
 			sahf
-			jnb inf
-				cmp ecx, partida
-				je inf
-					mov edx, OFFSET infin
-					call WriteString
-					call Crlf
-					jmp ninf
-inf:			call WriteFloat
-				fstp auxF
+			jne inf
+				mov edx, OFFSET infin
+				call WriteString	; Si la distancia del nodo es infinito, no se puede llegar a el desde el nodo de partida dado,
+				call Crlf			; entonces imprimimos 'inf'
+				jmp ninf
+inf:			call WriteFloat		; Si la distancia del nodo no es infinito,
+				fstp auxF			; la imprimimos
 				call Crlf
 ninf:
 			inc ecx
