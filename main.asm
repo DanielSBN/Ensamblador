@@ -227,7 +227,16 @@ pos:
 				cmp aux2, ebx
 				je equa		; Si el nodo con el que esta conectado es el mismo, ignoramos la distancia introducida
 					invoke IndexarMatriz, grafo, n, ebx, aux2, TYPE REAL4
-					fstp REAL4 PTR [esi]
+
+					fld REAL4 PTR [esi]
+					fcomp epsilon
+					fnstsw ax
+					sahf
+					jna si0		; Si el valor de la conexion era 0, introducimos el valor insertado por el usuario en la matriz
+						fld REAL4 PTR [esi]
+						fcomip st(0), st(1)
+						jna equa					; Si el valor de la conexion no era 0 y el valor insertado por el usuario es menor que
+si0:						fstp REAL4 PTR [esi]	; el valor que habia en la matriz, reemplazamos el ultimo con el primero
 				
 equa:			inc ecx
 				jmp wD

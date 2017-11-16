@@ -1,4 +1,4 @@
-Microsoft (R) Macro Assembler Version 14.11.25547.0	    11/13/17 12:15:38
+Microsoft (R) Macro Assembler Version 14.11.25547.0	    11/16/17 10:27:24
 main.asm						     Page 1 - 1
 
 
@@ -358,7 +358,7 @@ main.asm						     Page 1 - 1
 						invoke GetProcessHeap	; Obtenemos el manejador del heap actual, el cual es guardado en eax
  00000096  E8 00000000 E   *	    call   GetProcessHeap
  0000009B  83 F8 00				cmp eax, NULL	; Si no se obtuvo correctamente el manejador,
- 0000009E  0F 84 00000403			je nAlloc		; detenemos el programa
+ 0000009E  0F 84 00000416			je nAlloc		; detenemos el programa
  000000A4  A3 0000039B R			mov hhm, eax
 						
 						; Inicializamos la matriz de adyacencia en el heap
@@ -369,7 +369,7 @@ main.asm						     Page 1 - 1
  000000B7  E8 00000000 E   *	    call   HeapAlloc
 																		; en eax un puntero al bloque de memoria), inicializando todos los valores con 0
  000000BC  83 F8 00				cmp eax, NULL	; Si no se asigno correctamente el puntero,
- 000000BF  0F 84 000003E2			je nAlloc		; detenemos el programa
+ 000000BF  0F 84 000003F5			je nAlloc		; detenemos el programa
  000000C5  A3 0000039F R			mov grafo, eax
 						
 						; PEDIMOS LAS CONEXIONES DEL GRAFO
@@ -377,7 +377,7 @@ main.asm						     Page 1 - 1
 						; Ciclo externo, para pedir la cantidad de conexiones de cada nodo
  000000CA  BB 00000000				mov ebx, 0
  000000CF  3B 1D 0000038F R	wN:			cmp ebx, n
- 000000D5  0F 8D 000000E7				jge ewN
+ 000000D5  0F 8D 000000FA				jge ewN
 							
  000000DB  BA 0000010E R	nc:			mov edx, OFFSET con1
  000000E0  E8 00000000 E				call WriteString
@@ -399,7 +399,7 @@ main.asm						     Page 1 - 1
 							; Ciclo interno, para pedir las distancias de las conexiones de cada nodo
  0000011C  B9 00000000					mov ecx, 0
  00000121  3B 0D 00000383 R	wD:				cmp ecx, aux1
- 00000127  0F 8D 0000008F					jge ewD
+ 00000127  0F 8D 000000A2					jge ewD
 								
 								; Pedimos el nodo con el cual esta conectado el nodo actual
  0000012D  BA 0000013D R	an:				mov edx, OFFSET con3
@@ -413,8 +413,8 @@ main.asm						     Page 1 - 1
  0000014A  A3 00000387 R							mov aux2, eax
  0000014F  EB 11								jmp ann
  00000151  BA 0000023F R	gnn:					mov edx, OFFSET con7
- 00000156  E8 00000000 E							call WriteString
- 0000015B  E8 00000000 E							call Crlf
+ 00000156  E8 00000000 E							call WriteString	; Si el nodo conectado no esta dentro del rango permitido,
+ 0000015B  E8 00000000 E							call Crlf			; lo volvemos a pedir
  00000160  EB CB								jmp an
  00000162			ann:			
 								; Pedimos la distancia de la conexion actual
@@ -431,11 +431,11 @@ main.asm						     Page 1 - 1
  00000181  BA 0000018F R						mov edx, OFFSET con5
  00000186  E8 00000000 E						call WriteString
  0000018B  E8 00000000 E						call Crlf
- 00000190  EB D0							jmp npos	; En caso de que la distancia introducida sea negativa o nula, se pide de nuevo
+ 00000190  EB D0							jmp npos	; En caso de que la distancia introducida sea negativa o nula, la pedimos de nuevo
  00000192			pos:			
 								; Calculamos la coordenada de la conexion en la matriz de adyacencia y la introducimos
  00000192  39 1D 00000387 R					cmp aux2, ebx
- 00000198  74 1C						je equa		; Si el nodo con el que esta conectado es el mismo, ignoramos la distancia introducida
+ 00000198  74 2F						je equa		; Si el nodo con el que esta conectado es el mismo, ignoramos la distancia introducida
 									invoke IndexarMatriz, grafo, n, ebx, aux2, TYPE REAL4
  0000019A  6A 04	   *	    push   +000000004h
  0000019C  FF 35 00000387 R *	    push   aux2
@@ -443,282 +443,291 @@ main.asm						     Page 1 - 1
  000001A3  FF 35 0000038F R *	    push   n
  000001A9  FF 35 0000039F R *	    push   grafo
  000001AF  E8 FFFFFE61	   *	    call   IndexarMatriz
- 000001B4  D9 1E							fstp REAL4 PTR [esi]
+
+ 000001B4  D9 06							fld REAL4 PTR [esi]
+ 000001B6  D8 1D 00000000 R						fcomp epsilon
+ 000001BC  DF E0							fnstsw ax
+ 000001BE  9E								sahf
+ 000001BF  76 06							jna si0		; Si el valor de la conexion era 0, introducimos el valor insertado por el usuario en la matriz
+ 000001C1  D9 06								fld REAL4 PTR [esi]
+ 000001C3  DF F1								fcomip st(0), st(1)
+ 000001C5  76 02								jna equa					; Si el valor de la conexion no era 0 y el valor insertado por el usuario es menor que
+ 000001C7  D9 1E		si0:						fstp REAL4 PTR [esi]	; el valor que habia en la matriz, reemplazamos el ultimo con el primero
 								
- 000001B6  41			equa:			inc ecx
- 000001B7  E9 FFFFFF65						jmp wD
- 000001BC			ewD:		
- 000001BC  43						inc ebx
- 000001BD  E9 FFFFFF0D					jmp wN
- 000001C2			ewN:	
+ 000001C9  41			equa:			inc ecx
+ 000001CA  E9 FFFFFF52						jmp wD
+ 000001CF			ewD:		
+ 000001CF  43						inc ebx
+ 000001D0  E9 FFFFFEFA					jmp wN
+ 000001D5			ewN:	
 						; Pedimos el nodo de partida
- 000001C2  BA 000002C0 R			mov edx, OFFSET ini
- 000001C7  E8 00000000 E			call WriteString
- 000001CC  E8 00000000 E			call ReadDec
- 000001D1  48					dec eax
- 000001D2  A3 000003AB R			mov partida, eax
+ 000001D5  BA 000002C0 R			mov edx, OFFSET ini
+ 000001DA  E8 00000000 E			call WriteString
+ 000001DF  E8 00000000 E			call ReadDec
+ 000001E4  48					dec eax
+ 000001E5  A3 000003AB R			mov partida, eax
 
 						; Inicializamos en el heap el arreglo para almacenar las distancias de la misma manera que la matriz de adyacencia
- 000001D7  8B 1D 0000038F R			mov ebx, n
- 000001DD  6B DB 04				imul ebx, TYPE REAL4
+ 000001EA  8B 1D 0000038F R			mov ebx, n
+ 000001F0  6B DB 04				imul ebx, TYPE REAL4
 						invoke HeapAlloc, hhm, HEAP_ZERO_MEMORY, ebx
- 000001E0  53		   *	    push   ebx
- 000001E1  6A 08	   *	    push   +000000008h
- 000001E3  FF 35 0000039B R *	    push   hhm
- 000001E9  E8 00000000 E   *	    call   HeapAlloc
- 000001EE  83 F8 00				cmp eax, NULL
- 000001F1  0F 84 000002B0			je nAlloc
- 000001F7  A3 000003A3 R			mov distancias, eax
+ 000001F3  53		   *	    push   ebx
+ 000001F4  6A 08	   *	    push   +000000008h
+ 000001F6  FF 35 0000039B R *	    push   hhm
+ 000001FC  E8 00000000 E   *	    call   HeapAlloc
+ 00000201  83 F8 00				cmp eax, NULL
+ 00000204  0F 84 000002B0			je nAlloc
+ 0000020A  A3 000003A3 R			mov distancias, eax
 
 						; Inicializamos en el heap un arreglo para comprobar en el algoritmo los nodos que ya han sido visitados
- 000001FC  8B 1D 0000038F R			mov ebx, n
- 00000202  6B DB 01				imul ebx, TYPE BYTE
+ 0000020F  8B 1D 0000038F R			mov ebx, n
+ 00000215  6B DB 01				imul ebx, TYPE BYTE
 						invoke HeapAlloc, hhm, HEAP_ZERO_MEMORY, ebx
- 00000205  53		   *	    push   ebx
- 00000206  6A 08	   *	    push   +000000008h
- 00000208  FF 35 0000039B R *	    push   hhm
- 0000020E  E8 00000000 E   *	    call   HeapAlloc
- 00000213  83 F8 00				cmp eax, NULL
- 00000216  0F 84 0000028B			je nAlloc
- 0000021C  A3 000003A7 R			mov boo, eax
+ 00000218  53		   *	    push   ebx
+ 00000219  6A 08	   *	    push   +000000008h
+ 0000021B  FF 35 0000039B R *	    push   hhm
+ 00000221  E8 00000000 E   *	    call   HeapAlloc
+ 00000226  83 F8 00				cmp eax, NULL
+ 00000229  0F 84 0000028B			je nAlloc
+ 0000022F  A3 000003A7 R			mov boo, eax
 						
 						; Para cada nodo del grafo, inicializamos las distancias iniciales
- 00000221  B9 00000000				mov ecx, 0
- 00000226  3B 0D 0000038F R	wInit:	cmp ecx, n
- 0000022C  7D 47				jge ewInit
+ 00000234  B9 00000000				mov ecx, 0
+ 00000239  3B 0D 0000038F R	wInit:	cmp ecx, n
+ 0000023F  7D 47				jge ewInit
 							invoke IndexarArreglo, distancias, ecx, TYPE REAL4
- 0000022E  6A 04	   *	    push   +000000004h
- 00000230  51		   *	    push   ecx
- 00000231  FF 35 000003A3 R *	    push   distancias
- 00000237  E8 FFFFFDC4	   *	    call   IndexarArreglo
- 0000023C  8B FE					mov edi, esi
+ 00000241  6A 04	   *	    push   +000000004h
+ 00000243  51		   *	    push   ecx
+ 00000244  FF 35 000003A3 R *	    push   distancias
+ 0000024A  E8 FFFFFDB1	   *	    call   IndexarArreglo
+ 0000024F  8B FE					mov edi, esi
 							invoke IndexarMatriz, grafo, n, partida, ecx, TYPE REAL4
- 0000023E  6A 04	   *	    push   +000000004h
- 00000240  51		   *	    push   ecx
- 00000241  FF 35 000003AB R *	    push   partida
- 00000247  FF 35 0000038F R *	    push   n
- 0000024D  FF 35 0000039F R *	    push   grafo
- 00000253  E8 FFFFFDBD	   *	    call   IndexarMatriz
+ 00000251  6A 04	   *	    push   +000000004h
+ 00000253  51		   *	    push   ecx
+ 00000254  FF 35 000003AB R *	    push   partida
+ 0000025A  FF 35 0000038F R *	    push   n
+ 00000260  FF 35 0000039F R *	    push   grafo
+ 00000266  E8 FFFFFDAA	   *	    call   IndexarMatriz
 
- 00000258  D9 06					fld REAL4 PTR [esi]
- 0000025A  D8 1D 00000000 R				fcomp epsilon
- 00000260  DF E0					fnstsw ax
- 00000262  9E						sahf
- 00000263  76 06					jna if0
- 00000265  D9 06						fld REAL4 PTR [esi]		; Si existe conexion entre el nodo inicial y el nodo actual,
- 00000267  D9 1F						fstp REAL4 PTR [edi]	; hacemos la distancia inicial del nodo actual igual a la distancia de dicha conexion
- 00000269  EB 07						jmp el0
- 0000026B  68 7F800000		if0:			push 7F800000h			; Si no existe conexion entre los nodos,
- 00000270  8F 07						pop REAL4 PTR [edi]		; la distancia inicial es igual a infinito
- 00000272			el0:		
- 00000272  41						inc ecx
- 00000273  EB B1					jmp wInit
- 00000275			ewInit:	
+ 0000026B  D9 06					fld REAL4 PTR [esi]
+ 0000026D  D8 1D 00000000 R				fcomp epsilon
+ 00000273  DF E0					fnstsw ax
+ 00000275  9E						sahf
+ 00000276  76 06					jna if0
+ 00000278  D9 06						fld REAL4 PTR [esi]		; Si existe conexion entre el nodo inicial y el nodo actual,
+ 0000027A  D9 1F						fstp REAL4 PTR [edi]	; hacemos la distancia inicial del nodo actual igual a la distancia de dicha conexion
+ 0000027C  EB 07						jmp el0
+ 0000027E  68 7F800000		if0:			push 7F800000h			; Si no existe conexion entre los nodos,
+ 00000283  8F 07						pop REAL4 PTR [edi]		; la distancia inicial es igual a infinito
+ 00000285			el0:		
+ 00000285  41						inc ecx
+ 00000286  EB B1					jmp wInit
+ 00000288			ewInit:	
 						; Inicializamos la distancia minima del nodo inicial en 0
 						invoke IndexarArreglo, distancias, partida, TYPE REAL4
- 00000275  6A 04	   *	    push   +000000004h
- 00000277  FF 35 000003AB R *	    push   partida
- 0000027D  FF 35 000003A3 R *	    push   distancias
- 00000283  E8 FFFFFD78	   *	    call   IndexarArreglo
- 00000288  C7 05 00000383 R			mov aux1, 0
+ 00000288  6A 04	   *	    push   +000000004h
+ 0000028A  FF 35 000003AB R *	    push   partida
+ 00000290  FF 35 000003A3 R *	    push   distancias
+ 00000296  E8 FFFFFD65	   *	    call   IndexarArreglo
+ 0000029B  C7 05 00000383 R			mov aux1, 0
 	   00000000
- 00000292  DB 05 00000383 R			fild aux1
- 00000298  D9 1E				fstp REAL4 PTR [esi]
+ 000002A5  DB 05 00000383 R			fild aux1
+ 000002AB  D9 1E				fstp REAL4 PTR [esi]
 
 						; Marcamos como visitado el nodo inicial
 						invoke IndexarArreglo, boo, partida, TYPE BYTE
- 0000029A  6A 01	   *	    push   +000000001h
- 0000029C  FF 35 000003AB R *	    push   partida
- 000002A2  FF 35 000003A7 R *	    push   boo
- 000002A8  E8 FFFFFD53	   *	    call   IndexarArreglo
- 000002AD  6A 01				push 1
- 000002AF  8F 06				pop [esi]
+ 000002AD  6A 01	   *	    push   +000000001h
+ 000002AF  FF 35 000003AB R *	    push   partida
+ 000002B5  FF 35 000003A7 R *	    push   boo
+ 000002BB  E8 FFFFFD40	   *	    call   IndexarArreglo
+ 000002C0  6A 01				push 1
+ 000002C2  8F 06				pop [esi]
 
- 000002B1  C6 05 000003B8 R	wMin:	mov vis, 1
+ 000002C4  C6 05 000003B8 R	wMin:	mov vis, 1
 	   01
 
 						; Iteramos para verificar si todos los nodos estan explorados
- 000002B8  BB 00000000				mov ebx, 0
- 000002BD  3B 1D 0000038F R	wVis:	cmp ebx, n
- 000002C3  7D 20				jge ewVis
+ 000002CB  BB 00000000				mov ebx, 0
+ 000002D0  3B 1D 0000038F R	wVis:	cmp ebx, n
+ 000002D6  7D 20				jge ewVis
 							invoke IndexarArreglo, boo, ebx, TYPE BYTE
- 000002C5  6A 01	   *	    push   +000000001h
- 000002C7  53		   *	    push   ebx
- 000002C8  FF 35 000003A7 R *	    push   boo
- 000002CE  E8 FFFFFD2D	   *	    call   IndexarArreglo
- 000002D3  8A 06					mov al, BYTE PTR [esi]
- 000002D5  3C 00					cmp al, 0
- 000002D7  75 09					jnz brv
- 000002D9  C6 05 000003B8 R					mov vis, 0	; El momento en el que encontremos un nodo no-explorado,
+ 000002D8  6A 01	   *	    push   +000000001h
+ 000002DA  53		   *	    push   ebx
+ 000002DB  FF 35 000003A7 R *	    push   boo
+ 000002E1  E8 FFFFFD1A	   *	    call   IndexarArreglo
+ 000002E6  8A 06					mov al, BYTE PTR [esi]
+ 000002E8  3C 00					cmp al, 0
+ 000002EA  75 09					jnz brv
+ 000002EC  C6 05 000003B8 R					mov vis, 0	; El momento en el que encontremos un nodo no-explorado,
 	   00
- 000002E0  EB 03						jmp ewVis	; detenemos el ciclo
+ 000002F3  EB 03						jmp ewVis	; detenemos el ciclo
 
- 000002E2  43			brv:			inc ebx
- 000002E3  EB D8						jmp wVis
- 000002E5			ewVis:
+ 000002F5  43			brv:			inc ebx
+ 000002F6  EB D8						jmp wVis
+ 000002F8			ewVis:
 						; Si aun no se han explorado todos los nodos, calculamos las distancias minimas para esta iteracion
- 000002E5  80 3D 000003B8 R			cmp vis, 0
+ 000002F8  80 3D 000003B8 R			cmp vis, 0
 	   00
- 000002EC  0F 85 000000E6			jnz emin
- 000002F2  C7 05 000003B9 R				mov d, 7F800000h
+ 000002FF  0F 85 000000E6			jnz emin
+ 00000305  C7 05 000003B9 R				mov d, 7F800000h
 	   7F800000
 
 							; Seleccionamos el nodo no-explorado con la distancia minima (lo denominamos nodo minimo)
- 000002FC  B9 00000000					mov ecx, 0
- 00000301  3B 0D 0000038F R	exp:		cmp ecx, n
- 00000307  7D 42					jge eexp
+ 0000030F  B9 00000000					mov ecx, 0
+ 00000314  3B 0D 0000038F R	exp:		cmp ecx, n
+ 0000031A  7D 42					jge eexp
 								invoke IndexarArreglo, distancias, ecx, TYPE REAL4
- 00000309  6A 04	   *	    push   +000000004h
- 0000030B  51		   *	    push   ecx
- 0000030C  FF 35 000003A3 R *	    push   distancias
- 00000312  E8 FFFFFCE9	   *	    call   IndexarArreglo
- 00000317  8B FE						mov edi, esi
+ 0000031C  6A 04	   *	    push   +000000004h
+ 0000031E  51		   *	    push   ecx
+ 0000031F  FF 35 000003A3 R *	    push   distancias
+ 00000325  E8 FFFFFCD6	   *	    call   IndexarArreglo
+ 0000032A  8B FE						mov edi, esi
 								invoke IndexarArreglo, boo, ecx, TYPE BYTE
- 00000319  6A 01	   *	    push   +000000001h
- 0000031B  51		   *	    push   ecx
- 0000031C  FF 35 000003A7 R *	    push   boo
- 00000322  E8 FFFFFCD9	   *	    call   IndexarArreglo
- 00000327  8A 06						mov al, BYTE PTR [esi]
- 00000329  3C 00						cmp al, 0
- 0000032B  75 1B						jnz nd
- 0000032D  D9 07							fld REAL4 PTR [edi]
- 0000032F  D8 1D 000003B9 R						fcomp d
- 00000335  DF E0							fnstsw ax
- 00000337  9E								sahf
- 00000338  77 0E							jnbe nd
- 0000033A  D9 07								fld REAL4 PTR [edi]		; Si el nodo no esta explorado y su distancia es menor que la distancia minima encontrada
- 0000033C  D9 1D 000003B9 R							fstp d					; hasta el momento, designamos este como el nodo minimo
- 00000342  89 0D 000003BD R							mov x, ecx
+ 0000032C  6A 01	   *	    push   +000000001h
+ 0000032E  51		   *	    push   ecx
+ 0000032F  FF 35 000003A7 R *	    push   boo
+ 00000335  E8 FFFFFCC6	   *	    call   IndexarArreglo
+ 0000033A  8A 06						mov al, BYTE PTR [esi]
+ 0000033C  3C 00						cmp al, 0
+ 0000033E  75 1B						jnz nd
+ 00000340  D9 07							fld REAL4 PTR [edi]
+ 00000342  D8 1D 000003B9 R						fcomp d
+ 00000348  DF E0							fnstsw ax
+ 0000034A  9E								sahf
+ 0000034B  77 0E							jnbe nd
+ 0000034D  D9 07								fld REAL4 PTR [edi]		; Si el nodo no esta explorado y su distancia es menor que la distancia minima encontrada
+ 0000034F  D9 1D 000003B9 R							fstp d					; hasta el momento, designamos este como el nodo minimo
+ 00000355  89 0D 000003BD R							mov x, ecx
 
- 00000348  41			nd:					inc ecx
- 00000349  EB B6							jmp exp
- 0000034B			eexp:
+ 0000035B  41			nd:					inc ecx
+ 0000035C  EB B6							jmp exp
+ 0000035E			eexp:
 							; Marcamos el nodo obtenido como explorado
 							invoke IndexarArreglo, boo, x, TYPE BYTE
- 0000034B  6A 01	   *	    push   +000000001h
- 0000034D  FF 35 000003BD R *	    push   x
- 00000353  FF 35 000003A7 R *	    push   boo
- 00000359  E8 FFFFFCA2	   *	    call   IndexarArreglo
- 0000035E  6A 01					push 1
- 00000360  8F 06					pop [esi]
+ 0000035E  6A 01	   *	    push   +000000001h
+ 00000360  FF 35 000003BD R *	    push   x
+ 00000366  FF 35 000003A7 R *	    push   boo
+ 0000036C  E8 FFFFFC8F	   *	    call   IndexarArreglo
+ 00000371  6A 01					push 1
+ 00000373  8F 06					pop [esi]
 							
 							; Iteramos a traves de las conexiones del nodo
- 00000362  B9 00000000					mov ecx, 0
- 00000367  3B 0D 0000038F R	wfD:		cmp ecx, n
- 0000036D  7D 64					jge ewfD
+ 00000375  B9 00000000					mov ecx, 0
+ 0000037A  3B 0D 0000038F R	wfD:		cmp ecx, n
+ 00000380  7D 64					jge ewfD
 								invoke IndexarMatriz, grafo, n, x, ecx, TYPE REAL4
- 0000036F  6A 04	   *	    push   +000000004h
- 00000371  51		   *	    push   ecx
- 00000372  FF 35 000003BD R *	    push   x
- 00000378  FF 35 0000038F R *	    push   n
- 0000037E  FF 35 0000039F R *	    push   grafo
- 00000384  E8 FFFFFC8C	   *	    call   IndexarMatriz
- 00000389  D9 06						fld REAL4 PTR [esi]
- 0000038B  D8 1D 00000000 R					fcomp epsilon
- 00000391  DF E0						fnstsw ax
- 00000393  9E							sahf
- 00000394  76 3A						jna is0
- 00000396  D9 06							fld REAL4 PTR [esi]
+ 00000382  6A 04	   *	    push   +000000004h
+ 00000384  51		   *	    push   ecx
+ 00000385  FF 35 000003BD R *	    push   x
+ 0000038B  FF 35 0000038F R *	    push   n
+ 00000391  FF 35 0000039F R *	    push   grafo
+ 00000397  E8 FFFFFC79	   *	    call   IndexarMatriz
+ 0000039C  D9 06						fld REAL4 PTR [esi]
+ 0000039E  D8 1D 00000000 R					fcomp epsilon
+ 000003A4  DF E0						fnstsw ax
+ 000003A6  9E							sahf
+ 000003A7  76 3A						jna is0
+ 000003A9  D9 06							fld REAL4 PTR [esi]
 									invoke IndexarArreglo, distancias, x, TYPE REAL4
- 00000398  6A 04	   *	    push   +000000004h
- 0000039A  FF 35 000003BD R *	    push   x
- 000003A0  FF 35 000003A3 R *	    push   distancias
- 000003A6  E8 FFFFFC55	   *	    call   IndexarArreglo
- 000003AB  D8 06							fadd REAL4 PTR [esi]
- 000003AD  D9 15 0000038B R						fst auxF
+ 000003AB  6A 04	   *	    push   +000000004h
+ 000003AD  FF 35 000003BD R *	    push   x
+ 000003B3  FF 35 000003A3 R *	    push   distancias
+ 000003B9  E8 FFFFFC42	   *	    call   IndexarArreglo
+ 000003BE  D8 06							fadd REAL4 PTR [esi]
+ 000003C0  D9 15 0000038B R						fst auxF
 									invoke IndexarArreglo, distancias, ecx, TYPE REAL4
- 000003B3  6A 04	   *	    push   +000000004h
- 000003B5  51		   *	    push   ecx
- 000003B6  FF 35 000003A3 R *	    push   distancias
- 000003BC  E8 FFFFFC3F	   *	    call   IndexarArreglo
- 000003C1  D8 1E							fcomp REAL4 PTR [esi]
- 000003C3  DF E0							fnstsw ax
- 000003C5  9E								sahf
- 000003C6  73 08							jnb is0
- 000003C8  D9 05 0000038B R							fld auxF				; Si la distancia del nodo minimo sumada con la distancia de su conexion con el nodo actual
- 000003CE  D9 1E								fstp REAL4 PTR [esi]	; es menor que la distancia del nodo actual, hacemos el ultimo valor igual al primero
- 000003D0			is0:				
- 000003D0  41							inc ecx
- 000003D1  EB 94						jmp wfD
- 000003D3			ewfD:
- 000003D3  E9 FFFFFED9					jmp wMin
- 000003D8			emin:
+ 000003C6  6A 04	   *	    push   +000000004h
+ 000003C8  51		   *	    push   ecx
+ 000003C9  FF 35 000003A3 R *	    push   distancias
+ 000003CF  E8 FFFFFC2C	   *	    call   IndexarArreglo
+ 000003D4  D8 1E							fcomp REAL4 PTR [esi]
+ 000003D6  DF E0							fnstsw ax
+ 000003D8  9E								sahf
+ 000003D9  73 08							jnb is0
+ 000003DB  D9 05 0000038B R							fld auxF				; Si la distancia del nodo minimo sumada con la distancia de su conexion con el nodo actual
+ 000003E1  D9 1E								fstp REAL4 PTR [esi]	; es menor que la distancia del nodo actual, hacemos el ultimo valor igual al primero
+ 000003E3			is0:				
+ 000003E3  41							inc ecx
+ 000003E4  EB 94						jmp wfD
+ 000003E6			ewfD:
+ 000003E6  E9 FFFFFED9					jmp wMin
+ 000003EB			emin:
 						; Iteramos a traves del arreglo de distancias e imprimimos cada una
- 000003D8  E8 00000000 E			call Crlf
- 000003DD  BA 00000304 R			mov edx, OFFSET resul
- 000003E2  E8 00000000 E			call WriteString
- 000003E7  E8 00000000 E			call Crlf
+ 000003EB  E8 00000000 E			call Crlf
+ 000003F0  BA 00000304 R			mov edx, OFFSET resul
+ 000003F5  E8 00000000 E			call WriteString
+ 000003FA  E8 00000000 E			call Crlf
 
- 000003EC  B9 00000000				mov ecx, 0
- 000003F1  3B 0D 0000038F R	wpr:	cmp ecx, n
- 000003F7  7D 6E				jge ewpr
+ 000003FF  B9 00000000				mov ecx, 0
+ 00000404  3B 0D 0000038F R	wpr:	cmp ecx, n
+ 0000040A  7D 6E				jge ewpr
 							; Imprimimos el nodo al cual pertenece la distancia
- 000003F9  BA 00000379 R				mov edx, OFFSET node
- 000003FE  E8 00000000 E				call WriteString
- 00000403  8B C1					mov eax, ecx
- 00000405  40						inc eax
- 00000406  E8 00000000 E				call WriteDec
- 0000040B  B0 3A					mov al, ':'
- 0000040D  E8 00000000 E				call WriteChar
- 00000412  B0 09					mov al, 9h
- 00000414  E8 00000000 E				call WriteChar
- 00000419  E8 00000000 E				call WriteChar
+ 0000040C  BA 00000379 R				mov edx, OFFSET node
+ 00000411  E8 00000000 E				call WriteString
+ 00000416  8B C1					mov eax, ecx
+ 00000418  40						inc eax
+ 00000419  E8 00000000 E				call WriteDec
+ 0000041E  B0 3A					mov al, ':'
+ 00000420  E8 00000000 E				call WriteChar
+ 00000425  B0 09					mov al, 9h
+ 00000427  E8 00000000 E				call WriteChar
+ 0000042C  E8 00000000 E				call WriteChar
 
 							; Imprimimos la distancia como tal
- 0000041E  C7 05 0000038B R				mov auxF, 7F800000h
+ 00000431  C7 05 0000038B R				mov auxF, 7F800000h
 	   7F800000
 							invoke IndexarArreglo, distancias, ecx, TYPE REAL4
- 00000428  6A 04	   *	    push   +000000004h
- 0000042A  51		   *	    push   ecx
- 0000042B  FF 35 000003A3 R *	    push   distancias
- 00000431  E8 FFFFFBCA	   *	    call   IndexarArreglo
- 00000436  D9 06					fld REAL4 PTR[esi]
- 00000438  D8 15 0000038B R				fcom auxF
- 0000043E  DF E0					fnstsw ax
- 00000440  9E						sahf
- 00000441  75 11					jne inf
- 00000443  BA 0000037F R					mov edx, OFFSET infin
- 00000448  E8 00000000 E					call WriteString	; Si la distancia del nodo es infinito, no se puede llegar a el desde el nodo de partida dado,
- 0000044D  E8 00000000 E					call Crlf			; entonces imprimimos 'inf'
- 00000452  EB 10						jmp ninf
- 00000454  E8 00000000 E	inf:			call WriteFloat		; Si la distancia del nodo no es infinito,
- 00000459  D9 1D 0000038B R					fstp auxF			; la imprimimos
- 0000045F  E8 00000000 E					call Crlf
- 00000464			ninf:
- 00000464  41						inc ecx
- 00000465  EB 8A					jmp wpr
- 00000467			ewpr:
- 00000467  E8 00000000 E			call Crlf
+ 0000043B  6A 04	   *	    push   +000000004h
+ 0000043D  51		   *	    push   ecx
+ 0000043E  FF 35 000003A3 R *	    push   distancias
+ 00000444  E8 FFFFFBB7	   *	    call   IndexarArreglo
+ 00000449  D9 06					fld REAL4 PTR[esi]
+ 0000044B  D8 15 0000038B R				fcom auxF
+ 00000451  DF E0					fnstsw ax
+ 00000453  9E						sahf
+ 00000454  75 11					jne inf
+ 00000456  BA 0000037F R					mov edx, OFFSET infin
+ 0000045B  E8 00000000 E					call WriteString	; Si la distancia del nodo es infinito, no se puede llegar a el desde el nodo de partida dado,
+ 00000460  E8 00000000 E					call Crlf			; entonces imprimimos 'inf'
+ 00000465  EB 10						jmp ninf
+ 00000467  E8 00000000 E	inf:			call WriteFloat		; Si la distancia del nodo no es infinito,
+ 0000046C  D9 1D 0000038B R					fstp auxF			; la imprimimos
+ 00000472  E8 00000000 E					call Crlf
+ 00000477			ninf:
+ 00000477  41						inc ecx
+ 00000478  EB 8A					jmp wpr
+ 0000047A			ewpr:
+ 0000047A  E8 00000000 E			call Crlf
 
 						; Si el programa termina con exito, liberamos la memoria ocupada por la matriz y los arreglos
 						invoke HeapFree, hhm, 0, grafo
- 0000046C  FF 35 0000039F R *	    push   grafo
- 00000472  6A 00	   *	    push   +000000000h
- 00000474  FF 35 0000039B R *	    push   hhm
- 0000047A  E8 00000000 E   *	    call   HeapFree
-						invoke HeapFree, hhm, 0, distancias
- 0000047F  FF 35 000003A3 R *	    push   distancias
+ 0000047F  FF 35 0000039F R *	    push   grafo
  00000485  6A 00	   *	    push   +000000000h
  00000487  FF 35 0000039B R *	    push   hhm
  0000048D  E8 00000000 E   *	    call   HeapFree
-						invoke HeapFree, hhm, 0, boo
- 00000492  FF 35 000003A7 R *	    push   boo
+						invoke HeapFree, hhm, 0, distancias
+ 00000492  FF 35 000003A3 R *	    push   distancias
  00000498  6A 00	   *	    push   +000000000h
  0000049A  FF 35 0000039B R *	    push   hhm
  000004A0  E8 00000000 E   *	    call   HeapFree
- 000004A5  EB 0A				jmp en
+						invoke HeapFree, hhm, 0, boo
+ 000004A5  FF 35 000003A7 R *	    push   boo
+ 000004AB  6A 00	   *	    push   +000000000h
+ 000004AD  FF 35 0000039B R *	    push   hhm
+ 000004B3  E8 00000000 E   *	    call   HeapFree
+ 000004B8  EB 0A				jmp en
 						
 						; En caso de que la asignacion de memoria fallase, le informamos al usuario
- 000004A7  BA 000002DD R	nAlloc:	mov edx, OFFSET fail
- 000004AC  E8 00000000 E			call WriteString
-		
- 000004B1			en:		
+ 000004BA  BA 000002DD R	nAlloc:	mov edx, OFFSET fail
+ 000004BF  E8 00000000 E			call WriteString
+						
+ 000004C4			en:		
 						exit
- 000004B1  6A 00	   *	    push   +000000000h
- 000004B3  E8 00000000 E   *	    call   ExitProcess
- 000004B8				main ENDP
+ 000004C4  6A 00	   *	    push   +000000000h
+ 000004C6  E8 00000000 E   *	    call   ExitProcess
+ 000004CB				main ENDP
 					END main
-Microsoft (R) Macro Assembler Version 14.11.25547.0	    11/13/17 12:15:38
+Microsoft (R) Macro Assembler Version 14.11.25547.0	    11/16/17 10:27:24
 main.asm						     Symbols 2 - 1
 
 
@@ -813,7 +822,7 @@ Segments and Groups:
 FLAT . . . . . . . . . . . . . .	GROUP
 STACK  . . . . . . . . . . . . .	32 Bit	 00001000 Para	  Stack	  'STACK'	 
 _DATA  . . . . . . . . . . . . .	32 Bit	 000003C1 Para	  Public  'DATA'	
-_TEXT  . . . . . . . . . . . . .	32 Bit	 000004B8 Para	  Public  'CODE'	
+_TEXT  . . . . . . . . . . . . .	32 Bit	 000004CB Para	  Public  'CODE'	
 
 
 Procedures, parameters, and locals:
@@ -930,7 +939,7 @@ WriteStackFrame  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External
 WriteString  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteToFile  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteWindowsMsg  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
-main . . . . . . . . . . . . . .	P Near	 00000037 _TEXT	Length= 00000481 Public STDCALL
+main . . . . . . . . . . . . . .	P Near	 00000037 _TEXT	Length= 00000494 Public STDCALL
   nn . . . . . . . . . . . . . .	L Near	 0000004E _TEXT	
   gn . . . . . . . . . . . . . .	L Near	 00000078 _TEXT	
   wN . . . . . . . . . . . . . .	L Near	 000000CF _TEXT	
@@ -942,30 +951,31 @@ main . . . . . . . . . . . . . .	P Near	 00000037 _TEXT	Length= 00000481 Public 
   ann  . . . . . . . . . . . . .	L Near	 00000162 _TEXT	
   npos . . . . . . . . . . . . .	L Near	 00000162 _TEXT	
   pos  . . . . . . . . . . . . .	L Near	 00000192 _TEXT	
-  equa . . . . . . . . . . . . .	L Near	 000001B6 _TEXT	
-  ewD  . . . . . . . . . . . . .	L Near	 000001BC _TEXT	
-  ewN  . . . . . . . . . . . . .	L Near	 000001C2 _TEXT	
-  wInit  . . . . . . . . . . . .	L Near	 00000226 _TEXT	
-  if0  . . . . . . . . . . . . .	L Near	 0000026B _TEXT	
-  el0  . . . . . . . . . . . . .	L Near	 00000272 _TEXT	
-  ewInit . . . . . . . . . . . .	L Near	 00000275 _TEXT	
-  wMin . . . . . . . . . . . . .	L Near	 000002B1 _TEXT	
-  wVis . . . . . . . . . . . . .	L Near	 000002BD _TEXT	
-  brv  . . . . . . . . . . . . .	L Near	 000002E2 _TEXT	
-  ewVis  . . . . . . . . . . . .	L Near	 000002E5 _TEXT	
-  exp  . . . . . . . . . . . . .	L Near	 00000301 _TEXT	
-  nd . . . . . . . . . . . . . .	L Near	 00000348 _TEXT	
-  eexp . . . . . . . . . . . . .	L Near	 0000034B _TEXT	
-  wfD  . . . . . . . . . . . . .	L Near	 00000367 _TEXT	
-  is0  . . . . . . . . . . . . .	L Near	 000003D0 _TEXT	
-  ewfD . . . . . . . . . . . . .	L Near	 000003D3 _TEXT	
-  emin . . . . . . . . . . . . .	L Near	 000003D8 _TEXT	
-  wpr  . . . . . . . . . . . . .	L Near	 000003F1 _TEXT	
-  inf  . . . . . . . . . . . . .	L Near	 00000454 _TEXT	
-  ninf . . . . . . . . . . . . .	L Near	 00000464 _TEXT	
-  ewpr . . . . . . . . . . . . .	L Near	 00000467 _TEXT	
-  nAlloc . . . . . . . . . . . .	L Near	 000004A7 _TEXT	
-  en . . . . . . . . . . . . . .	L Near	 000004B1 _TEXT	
+  si0  . . . . . . . . . . . . .	L Near	 000001C7 _TEXT	
+  equa . . . . . . . . . . . . .	L Near	 000001C9 _TEXT	
+  ewD  . . . . . . . . . . . . .	L Near	 000001CF _TEXT	
+  ewN  . . . . . . . . . . . . .	L Near	 000001D5 _TEXT	
+  wInit  . . . . . . . . . . . .	L Near	 00000239 _TEXT	
+  if0  . . . . . . . . . . . . .	L Near	 0000027E _TEXT	
+  el0  . . . . . . . . . . . . .	L Near	 00000285 _TEXT	
+  ewInit . . . . . . . . . . . .	L Near	 00000288 _TEXT	
+  wMin . . . . . . . . . . . . .	L Near	 000002C4 _TEXT	
+  wVis . . . . . . . . . . . . .	L Near	 000002D0 _TEXT	
+  brv  . . . . . . . . . . . . .	L Near	 000002F5 _TEXT	
+  ewVis  . . . . . . . . . . . .	L Near	 000002F8 _TEXT	
+  exp  . . . . . . . . . . . . .	L Near	 00000314 _TEXT	
+  nd . . . . . . . . . . . . . .	L Near	 0000035B _TEXT	
+  eexp . . . . . . . . . . . . .	L Near	 0000035E _TEXT	
+  wfD  . . . . . . . . . . . . .	L Near	 0000037A _TEXT	
+  is0  . . . . . . . . . . . . .	L Near	 000003E3 _TEXT	
+  ewfD . . . . . . . . . . . . .	L Near	 000003E6 _TEXT	
+  emin . . . . . . . . . . . . .	L Near	 000003EB _TEXT	
+  wpr  . . . . . . . . . . . . .	L Near	 00000404 _TEXT	
+  inf  . . . . . . . . . . . . .	L Near	 00000467 _TEXT	
+  ninf . . . . . . . . . . . . .	L Near	 00000477 _TEXT	
+  ewpr . . . . . . . . . . . . .	L Near	 0000047A _TEXT	
+  nAlloc . . . . . . . . . . . .	L Near	 000004BA _TEXT	
+  en . . . . . . . . . . . . . .	L Near	 000004C4 _TEXT	
 printf . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
 scanf  . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
 wsprintfA  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
